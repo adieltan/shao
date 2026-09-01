@@ -166,7 +166,7 @@ function initGauges() {
 }
 
 // -----------------------------------------------------------------------------
-// 2. Dedicated Purpose-Built Time-Series Charts
+// 2. Dedicated Purpose-Built Time-Series Charts with Offline Empty Sector Support
 // -----------------------------------------------------------------------------
 function initDedicatedCharts() {
   const commonChartConfig = {
@@ -179,7 +179,7 @@ function initDedicatedCharts() {
       animations: { enabled: true, easing: 'linear', dynamicAnimation: { speed: 600 } }
     },
     theme: { mode: 'dark' },
-    stroke: { curve: 'smooth', width: 2 },
+    stroke: { curve: 'monotoneCubic', width: 2.5, connectNulls: false },
     dataLabels: { enabled: false },
     grid: {
       borderColor: 'rgba(255, 255, 255, 0.05)',
@@ -209,7 +209,7 @@ function initDedicatedCharts() {
         title: { text: 'CPU (%)', style: { color: '#818cf8', fontSize: '10px' } },
         min: 0,
         max: 100,
-        labels: { style: { colors: '#64748b' }, formatter: (v) => `${Math.round(v)}%` }
+        labels: { style: { colors: '#64748b' }, formatter: (v) => v !== null && v !== undefined ? `${Math.round(v)}%` : '--' }
       },
       {
         seriesName: 'Clock Speed (MHz)',
@@ -217,7 +217,7 @@ function initDedicatedCharts() {
         title: { text: 'Clock (MHz)', style: { color: '#06b6d4', fontSize: '10px' } },
         min: 400,
         max: 3500,
-        labels: { style: { colors: '#64748b' }, formatter: (v) => `${Math.round(v)} MHz` }
+        labels: { style: { colors: '#64748b' }, formatter: (v) => v !== null && v !== undefined ? `${Math.round(v)} MHz` : '--' }
       }
     ],
     series: [
@@ -234,7 +234,7 @@ function initDedicatedCharts() {
     yaxis: {
       title: { text: 'Power (W)', style: { color: '#f59e0b', fontSize: '10px' } },
       min: 0,
-      labels: { style: { colors: '#64748b' }, formatter: (v) => `${v.toFixed(1)}W` }
+      labels: { style: { colors: '#64748b' }, formatter: (v) => v !== null && v !== undefined ? `${v.toFixed(1)}W` : '--' }
     },
     series: [
       { name: 'Power Draw (W)', data: [] }
@@ -253,6 +253,7 @@ function initDedicatedCharts() {
       labels: {
         style: { colors: '#64748b' },
         formatter: (bps) => {
+          if (bps === null || bps === undefined) return '--';
           if (bps < 1024) return `${bps.toFixed(0)} B/s`;
           if (bps < 1024 * 1024) return `${(bps / 1024).toFixed(1)} KB/s`;
           return `${(bps / (1024 * 1024)).toFixed(2)} MB/s`;
@@ -400,26 +401,60 @@ function updateDashboard(data) {
   updateDockerContainers(data.containers);
 }
 
+// -----------------------------------------------------------------------------
+// Offline Empty Sector Generator (Inserts nulls across gaps when machine was down)
+// -----------------------------------------------------------------------------
+function buildSeriesWithGaps(points, extractor, maxExpectedIntervalMs) {
+  if (!points || points.length === 0) return [];
+  const result = [];
+
+  for (let i = 0; i < points.length; i++) {
+    const p = points[i];
+    const val = extractor(p);
+
+    if (i > 0) {
+      const prevTs = points[i - 1].timestamp;
+      const curTs = p.timestamp;
+      const gap = curTs - prevTs;
+
+      // If gap exceeds 2.5x expected interval, machine was offline during this sector
+      if (gap > maxExpectedIntervalMs * 2.5) {
+        result.push([prevTs + Math.min(maxExpectedIntervalMs, 2000), null]);
+        result.push([curTs - Math.min(maxExpectedIntervalMs, 2000), null]);
+      }
+    }
+
+    result.push([p.timestamp, val]);
+  }
+  return result;
+}
+
 function renderAllCharts(points) {
   if (!points || points.length === 0) return;
 
+  // Expected sampling interval based on active time window
+  const expectedIntervalMs = Math.max(
+    (activeTimeWindowSeconds * 1000) / 120,
+    500
+  );
+
   // Graph 1: CPU Utilisation (%) & CPU Clock (MHz)
   chartCpu.updateSeries([
-    { name: 'CPU Load (%)', data: points.map(p => [p.timestamp, p.cpu]) },
-    { name: 'Clock Speed (MHz)', data: points.map(p => [p.timestamp, p.cpu_freq]) }
+    { name: 'CPU Load (%)', data: buildSeriesWithGaps(points, p => p.cpu, expectedIntervalMs) },
+    { name: 'Clock Speed (MHz)', data: buildSeriesWithGaps(points, p => p.cpu_freq, expectedIntervalMs) }
   ]);
 
-  // Graph 2: Power Draw
+  // Graph 2: Power Draw (Watts)
   chartPower.updateSeries([
-    { name: 'Power Draw (W)', data: points.map(p => [p.timestamp, p.power]) }
+    { name: 'Power Draw (W)', data: buildSeriesWithGaps(points, p => p.power, expectedIntervalMs) }
   ]);
 
-  // Graph 3: Network
+  // Graph 3: Network Throughput
   chartNetwork.updateSeries([
-    { name: 'LAN Download (B/s)', data: points.map(p => [p.timestamp, p.lan_rx]) },
-    { name: 'LAN Upload (B/s)', data: points.map(p => [p.timestamp, p.lan_tx]) },
-    { name: 'VPN Download (B/s)', data: points.map(p => [p.timestamp, p.vpn_rx]) },
-    { name: 'VPN Upload (B/s)', data: points.map(p => [p.timestamp, p.vpn_tx]) }
+    { name: 'LAN Download (B/s)', data: buildSeriesWithGaps(points, p => p.lan_rx, expectedIntervalMs) },
+    { name: 'LAN Upload (B/s)', data: buildSeriesWithGaps(points, p => p.lan_tx, expectedIntervalMs) },
+    { name: 'VPN Download (B/s)', data: buildSeriesWithGaps(points, p => p.vpn_rx, expectedIntervalMs) },
+    { name: 'VPN Upload (B/s)', data: buildSeriesWithGaps(points, p => p.vpn_tx, expectedIntervalMs) }
   ]);
 }
 
@@ -494,7 +529,7 @@ async function loadConfig() {
           </div>
           <h4 class="text-sm font-bold text-white group-hover:text-brand-300 transition">${app.name}</h4>
         </div>
-        <i data-lucide="external-link" class="w-4 h-4 text-slate-500 group-hover:text-brand-400 transition"></i>
+        <i data-lucide="external-link" class="w-3.5 h-3.5 text-slate-500 group-hover:text-brand-400 transition"></i>
       `;
       container.appendChild(tile);
     });
