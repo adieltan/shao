@@ -1,36 +1,21 @@
-# ==============================================================================
-# Shao (哨兵) - Server Telemetry & Monitoring Sentinel Configuration
-# ==============================================================================
-
 [server]
-# The network address and port to bind the dashboard web server
 host = "0.0.0.0"
-port = 8080
-
-# Telemetry sampling interval in milliseconds (default: 1000ms, ultra-fast: 500ms)
-polling_interval_ms = 1000
-
-# SQLite database file path for 7-day rolling historical metrics
+port = 8888
+polling_interval_ms = 500   # 0.5s ultra-fast hardware sampling
 db_path = "shao.db"
-
-# Number of days to keep historical metrics before pruning
 history_retention_days = 7
 
 [power]
-# Electricity cost per kWh (used to calculate live financial running costs)
-kwh_cost = 0.15
+kwh_cost = 0.15              # Electricity cost per kWh
 currency_symbol = "$"
 
 [network]
-# Interfaces to categorize under "Local Home LAN"
-lan_interfaces = ["enp2s0", "eth0", "wlp3s0", "wlan0", "en0"]
+lan_interfaces = ["enp2s0", "eth0", "wlp3s0", "wlan0"]
+vpn_interfaces = ["tailscale0", "wg0"]
 
-# Interfaces to categorize under "Remote VPN / Mesh"
-vpn_interfaces = ["tailscale0", "wg0", "tun0", "utun"]
-
-# ==============================================================================
-# Custom Application Cards (App Launcher & Health Indicators)
-# ==============================================================================
+[immich]
+url = "http://127.0.0.1:2283"
+api_key = "cdqs89jBjvSacX7oQR2tuLIejWLHdx1ZeazuU20JU"
 
 [[apps]]
 name = "Immich"
@@ -42,9 +27,16 @@ container = "immich_server"
 [[apps]]
 name = "Dockge"
 url = "http://192.168.1.1:5001"
-description = "Container Stack Manager"
+description = "Compose Stacks Portal"
 icon = "layers"
 container = "dockge"
+
+[[apps]]
+name = "Homepage"
+url = "http://192.168.1.1:3000"
+description = "App Launchpad"
+icon = "layout-grid"
+container = "homepage"
 
 [[apps]]
 name = "Tailscale"

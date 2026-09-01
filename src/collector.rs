@@ -1,6 +1,8 @@
 use crate::config::Config;
 use crate::db::{Database, HistoryPoint};
+use crate::dockge::DockgeCollector;
 use crate::docker::DockerClient;
+use crate::immich::{ImmichClient, ImmichStats};
 use crate::sensors::{FullTelemetry, SensorManager};
 use std::sync::Arc;
 use std::time::Duration;
@@ -12,6 +14,7 @@ pub struct CollectorService {
     db: Database,
     sensor_mgr: SensorManager,
     docker_client: DockerClient,
+    immich_client: Option<ImmichClient>,
     latest_telemetry: Arc<RwLock<Option<FullTelemetry>>>,
     tx: broadcast::Sender<FullTelemetry>,
 }
@@ -25,12 +28,17 @@ impl CollectorService {
     ) -> Self {
         let sensor_mgr = SensorManager::new(&config);
         let docker_client = DockerClient::new();
+        let immich_client = config
+            .immich
+            .as_ref()
+            .map(|c| ImmichClient::new(c.url.clone(), c.api_key.clone()));
 
         Self {
             config,
             db,
             sensor_mgr,
             docker_client,
+            immich_client,
             latest_telemetry,
             tx,
         }
@@ -39,15 +47,28 @@ impl CollectorService {
     pub async fn run(mut self) {
         let interval_ms = self.config.server.polling_interval_ms.max(250);
         let mut interval = tokio::time::interval(Duration::from_millis(interval_ms));
-        let mut prune_ticker = 0u64;
+        let mut tick_count = 0u64;
+        let mut cached_immich: Option<ImmichStats> = None;
 
         info!("Collector service started (Polling interval: {}ms)", interval_ms);
 
         loop {
             interval.tick().await;
+            tick_count += 1;
+
+            // Fetch Immich stats every 10 ticks (e.g. every 5 seconds)
+            if tick_count % 10 == 1 {
+                if let Some(ref client) = self.immich_client {
+                    if let Some(stats) = client.fetch_stats().await {
+                        cached_immich = Some(stats);
+                    }
+                }
+            }
 
             let containers = self.docker_client.list_containers().await;
-            let telemetry = self.sensor_mgr.collect_all(containers);
+            let dockge = Some(DockgeCollector::collect(&containers));
+
+            let telemetry = self.sensor_mgr.collect_all(containers, cached_immich.clone(), dockge);
 
             // 1. Record history point in SQLite
             let point = HistoryPoint {
@@ -76,8 +97,7 @@ impl CollectorService {
             let _ = self.tx.send(telemetry);
 
             // 4. Daily history pruning
-            prune_ticker += 1;
-            if prune_ticker % 3600 == 0 {
+            if tick_count % 7200 == 0 {
                 let _ = self.db.prune(self.config.server.history_retention_days);
             }
         }

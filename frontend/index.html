@@ -15,7 +15,6 @@
         extend: {
           colors: {
             brand: {
-              50: '#eef2ff',
               400: '#818cf8',
               500: '#6366f1',
               600: '#4f46e5',
@@ -62,7 +61,7 @@
         <!-- Live SSE Status Pill -->
         <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
           <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span id="connection-status">LIVE 1.0s</span>
+          <span id="connection-status">LIVE 0.5s</span>
         </div>
 
         <!-- Uptime Counter -->
@@ -126,18 +125,18 @@
 
     </div>
 
-    <!-- Core Metrics Cards Grid (CPU, RAM, LAN Bandwidth, VPN Bandwidth) -->
+    <!-- Core Metrics & Live Stats Cards Grid -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       
-      <!-- CPU Load Card -->
+      <!-- CPU Load & Clock Card -->
       <div class="p-4 rounded-2xl bg-surface-card border border-surface-border backdrop-blur-xl hover:border-brand-500/40 transition">
         <div class="flex items-center justify-between mb-2">
-          <span class="text-xs font-semibold uppercase text-slate-400">Processor Load</span>
+          <span class="text-xs font-semibold uppercase text-slate-400">CPU Load & Clock</span>
           <i data-lucide="cpu" class="w-4 h-4 text-brand-400"></i>
         </div>
-        <div class="flex items-baseline gap-2">
+        <div class="flex items-baseline justify-between">
           <span id="cpu-percent" class="text-2xl font-bold font-mono text-white">0.0%</span>
-          <span id="cpu-mhz" class="text-xs text-slate-400 font-mono">@ 800 MHz</span>
+          <span id="cpu-mhz-badge" class="px-2 py-0.5 text-xs font-mono font-bold rounded bg-brand-500/20 text-brand-300 border border-brand-500/30">800 MHz</span>
         </div>
         <div class="w-full bg-slate-800 rounded-full h-1.5 mt-3 overflow-hidden">
           <div id="cpu-bar" class="bg-gradient-to-r from-brand-500 to-cyan-400 h-1.5 rounded-full transition-all duration-300" style="width: 0%"></div>
@@ -150,7 +149,7 @@
           <span class="text-xs font-semibold uppercase text-slate-400">System Memory</span>
           <i data-lucide="hard-drive" class="w-4 h-4 text-purple-400"></i>
         </div>
-        <div class="flex items-baseline gap-2">
+        <div class="flex items-baseline justify-between">
           <span id="mem-percent" class="text-2xl font-bold font-mono text-white">0.0%</span>
           <span id="mem-human" class="text-xs text-slate-400 font-mono">0.0 / 0.0 GB</span>
         </div>
@@ -159,47 +158,49 @@
         </div>
       </div>
 
-      <!-- Local LAN Traffic Card -->
+      <!-- Immich Live Stats Card -->
       <div class="p-4 rounded-2xl bg-surface-card border border-surface-border backdrop-blur-xl hover:border-brand-500/40 transition">
         <div class="flex items-center justify-between mb-2">
-          <span class="text-xs font-semibold uppercase text-slate-400">Local Home LAN</span>
-          <i data-lucide="network" class="w-4 h-4 text-emerald-400"></i>
+          <span class="text-xs font-semibold uppercase text-slate-400">Immich Library</span>
+          <i data-lucide="image" class="w-4 h-4 text-cyan-400"></i>
         </div>
-        <div class="flex flex-col">
-          <div class="text-sm font-bold font-mono text-emerald-400 flex items-center gap-1">
-            <i data-lucide="arrow-down" class="w-3.5 h-3.5"></i> <span id="lan-rx">0 B/s</span>
-            <i data-lucide="arrow-up" class="w-3.5 h-3.5 ml-2 text-cyan-400"></i> <span id="lan-tx" class="text-cyan-400">0 B/s</span>
-          </div>
-          <span id="lan-total" class="text-xs text-slate-400 font-mono mt-1">Total: 0.0 GB</span>
+        <div class="flex items-baseline justify-between">
+          <span id="immich-photos" class="text-xl font-bold font-mono text-white">--</span>
+          <span id="immich-videos" class="text-xs text-slate-400 font-mono">-- videos</span>
+        </div>
+        <div class="flex items-center justify-between text-xs text-cyan-300 font-mono mt-2">
+          <span id="immich-storage">Storage: -- GB</span>
+          <span id="immich-user" class="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400">User</span>
         </div>
       </div>
 
-      <!-- Remote VPN Traffic Card -->
+      <!-- Dockge & Stacks Stats Card -->
       <div class="p-4 rounded-2xl bg-surface-card border border-surface-border backdrop-blur-xl hover:border-brand-500/40 transition">
         <div class="flex items-center justify-between mb-2">
-          <span class="text-xs font-semibold uppercase text-slate-400">Tailscale Remote VPN</span>
-          <i data-lucide="lock" class="w-4 h-4 text-amber-400"></i>
+          <span class="text-xs font-semibold uppercase text-slate-400">Dockge Stacks</span>
+          <i data-lucide="layers" class="w-4 h-4 text-emerald-400"></i>
         </div>
-        <div class="flex flex-col">
-          <div class="text-sm font-bold font-mono text-amber-400 flex items-center gap-1">
-            <i data-lucide="arrow-down" class="w-3.5 h-3.5"></i> <span id="vpn-rx">0 B/s</span>
-            <i data-lucide="arrow-up" class="w-3.5 h-3.5 ml-2 text-rose-400"></i> <span id="vpn-tx" class="text-rose-400">0 B/s</span>
-          </div>
-          <span id="vpn-total" class="text-xs text-slate-400 font-mono mt-1">Total: 0.0 GB</span>
+        <div class="flex items-baseline justify-between">
+          <span id="dockge-stacks" class="text-xl font-bold font-mono text-white">--</span>
+          <span id="dockge-containers" class="text-xs text-emerald-400 font-mono font-semibold">-- Running</span>
+        </div>
+        <div class="text-xs text-slate-400 font-mono mt-2 flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span>Compose Engine Online</span>
         </div>
       </div>
 
     </div>
 
-    <!-- Real-Time Time-Series Charts -->
-    <div class="p-6 rounded-2xl bg-surface-card border border-surface-border backdrop-blur-xl shadow-xl space-y-4">
-      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-white/5">
+    <!-- Separated Dedicated History Graphs Section -->
+    <div class="space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-1">
         <div>
           <h2 class="text-base font-bold text-white flex items-center gap-2">
             <i data-lucide="activity" class="w-4 h-4 text-brand-400"></i>
-            Live Telemetry & Historical Trends
+            Historical Telemetry Trends
           </h2>
-          <p class="text-xs text-slate-400">Continuous hardware time-series stream</p>
+          <p class="text-xs text-slate-400">Separated modular time-series panels</p>
         </div>
 
         <!-- Range Buttons -->
@@ -213,8 +214,46 @@
         </div>
       </div>
 
-      <!-- Chart Canvas -->
-      <div id="chart-telemetry" class="w-full h-72"></div>
+      <!-- 2-Panel Separated Graphs Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        <!-- Graph 1: Power Draw (Watts) & Thermals (°C) -->
+        <div class="p-5 rounded-2xl bg-surface-card border border-surface-border backdrop-blur-xl shadow-xl space-y-2">
+          <div class="flex items-center justify-between pb-2 border-b border-white/5">
+            <h3 class="text-xs font-bold uppercase text-slate-300 flex items-center gap-2">
+              <i data-lucide="zap" class="w-4 h-4 text-amber-400"></i>
+              Power Draw (Watts) & CPU Temperature (°C)
+            </h3>
+            <span class="text-[10px] text-slate-400 font-mono">RAPL & Hwmon</span>
+          </div>
+          <div id="chart-power-temp" class="w-full h-56"></div>
+        </div>
+
+        <!-- Graph 2: CPU Load (%) & Clock Frequency (MHz) -->
+        <div class="p-5 rounded-2xl bg-surface-card border border-surface-border backdrop-blur-xl shadow-xl space-y-2">
+          <div class="flex items-center justify-between pb-2 border-b border-white/5">
+            <h3 class="text-xs font-bold uppercase text-slate-300 flex items-center gap-2">
+              <i data-lucide="cpu" class="w-4 h-4 text-brand-400"></i>
+              CPU Utilization (%) & Dynamic Governor
+            </h3>
+            <span class="text-[10px] text-slate-400 font-mono">400 - 3100 MHz</span>
+          </div>
+          <div id="chart-cpu" class="w-full h-56"></div>
+        </div>
+
+        <!-- Graph 3: Network Bandwidth (Home LAN vs Remote VPN) -->
+        <div class="lg:col-span-2 p-5 rounded-2xl bg-surface-card border border-surface-border backdrop-blur-xl shadow-xl space-y-2">
+          <div class="flex items-center justify-between pb-2 border-b border-white/5">
+            <h3 class="text-xs font-bold uppercase text-slate-300 flex items-center gap-2">
+              <i data-lucide="network" class="w-4 h-4 text-emerald-400"></i>
+              Network Throughput: Local Home LAN vs. Remote Tailscale VPN
+            </h3>
+            <span class="text-[10px] text-slate-400 font-mono">enp2s0 / wlp3s0 vs. tailscale0</span>
+          </div>
+          <div id="chart-network" class="w-full h-56"></div>
+        </div>
+
+      </div>
     </div>
 
     <!-- App Launcher & Docker Health Section -->

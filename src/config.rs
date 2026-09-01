@@ -11,6 +11,8 @@ pub struct Config {
     #[serde(default)]
     pub network: NetworkConfig,
     #[serde(default)]
+    pub immich: Option<ImmichConfig>,
+    #[serde(default)]
     pub apps: Vec<AppCard>,
 }
 
@@ -45,6 +47,13 @@ pub struct NetworkConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImmichConfig {
+    #[serde(default = "default_immich_url")]
+    pub url: String,
+    pub api_key: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppCard {
     pub name: String,
     pub url: String,
@@ -57,13 +66,14 @@ pub struct AppCard {
 }
 
 fn default_host() -> String { "0.0.0.0".to_string() }
-fn default_port() -> u16 { 8080 }
+fn default_port() -> u16 { 8888 }
 fn default_interval() -> u64 { 1000 }
 fn default_db_path() -> String { "shao.db".to_string() }
 fn default_retention_days() -> u32 { 7 }
 fn default_kwh_cost() -> f64 { 0.15 }
 fn default_currency() -> String { "$".to_string() }
 fn default_icon() -> String { "globe".to_string() }
+fn default_immich_url() -> String { "http://127.0.0.1:2283".to_string() }
 
 fn default_lan_interfaces() -> Vec<String> {
     vec![
@@ -113,6 +123,10 @@ impl Default for Config {
             server: ServerConfig::default(),
             power: PowerConfig::default(),
             network: NetworkConfig::default(),
+            immich: Some(ImmichConfig {
+                url: "http://127.0.0.1:2283".into(),
+                api_key: "cdqs89jBjvSacX7oQR2tuLIejWLHdx1ZeazuU20JU".into(),
+            }),
             apps: vec![
                 AppCard {
                     name: "Immich".into(),

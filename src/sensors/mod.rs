@@ -11,7 +11,9 @@ use power::{PowerCollector, PowerMetrics};
 use thermals::{ThermalCollector, ThermalMetrics};
 
 use crate::config::Config;
+use crate::dockge::DockgeStats;
 use crate::docker::DockerContainer;
+use crate::immich::ImmichStats;
 use serde::Serialize;
 use sysinfo::System;
 
@@ -34,6 +36,8 @@ pub struct FullTelemetry {
     pub power: PowerMetrics,
     pub network: NetworkMetrics,
     pub containers: Vec<DockerContainer>,
+    pub immich: Option<ImmichStats>,
+    pub dockge: Option<DockgeStats>,
 }
 
 pub struct SensorManager {
@@ -58,7 +62,12 @@ impl SensorManager {
         }
     }
 
-    pub fn collect_all(&mut self, containers: Vec<DockerContainer>) -> FullTelemetry {
+    pub fn collect_all(
+        &mut self,
+        containers: Vec<DockerContainer>,
+        immich: Option<ImmichStats>,
+        dockge: Option<DockgeStats>,
+    ) -> FullTelemetry {
         let timestamp = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap_or_default()
@@ -93,6 +102,8 @@ impl SensorManager {
             power: self.power.collect(),
             network: self.network.collect(),
             containers,
+            immich,
+            dockge,
         }
     }
 }

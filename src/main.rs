@@ -2,7 +2,9 @@ mod api;
 mod collector;
 mod config;
 mod db;
+mod dockge;
 mod docker;
+mod immich;
 mod sensors;
 
 use api::{create_router, AppState};
@@ -36,13 +38,11 @@ struct Args {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
 
-    // 1. Initialize Logging
     let subscriber = FmtSubscriber::builder()
         .with_max_level(Level::INFO)
         .finish();
     let _ = tracing::subscriber::set_global_default(subscriber);
 
-    // 2. Load Configuration
     let mut config = Config::load_or_default(args.config.as_deref());
     if let Some(p) = args.port {
         config.server.port = p;
@@ -62,12 +62,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     info!("🛡️ Initializing Shao (哨兵) Server Sentinel...");
 
-    // 3. Initialize Embedded SQLite Database
     let db = Database::new(&config.server.db_path)
         .expect("Failed to initialize embedded SQLite database");
     info!("📁 Database initialized at {}", config.server.db_path);
 
-    // 4. Create Telemetry Channels & State
     let latest_telemetry = Arc::new(RwLock::new(None));
     let (tx, _rx) = broadcast::channel(100);
 
@@ -78,13 +76,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         tx: tx.clone(),
     };
 
-    // 5. Start Background Collector Service
     let collector = CollectorService::new(config.clone(), db, latest_telemetry, tx);
     tokio::spawn(async move {
         collector.run().await;
     });
 
-    // 6. Start Web Server
     let app = create_router(state);
     let addr: SocketAddr = format!("{}:{}", config.server.host, config.server.port).parse()?;
     info!("🚀 Shao Sentinel Web UI online at http://{}", addr);
