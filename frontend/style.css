@@ -1,0 +1,49 @@
+/* Custom Animations & Refinements */
+@keyframes spinSlow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin-slow {
+  animation: spinSlow 8s linear infinite;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.6);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.4);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.6);
+}
+
+/* ApexCharts Overrides for Crisp Dark Aesthetics */
+.apexcharts-canvas {
+  margin: 0 auto;
+}
+
+.apexcharts-tooltip {
+  background: rgba(15, 23, 42, 0.95) !important;
+  backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 0.75rem !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5) !important;
+}
+
+.apexcharts-tooltip-title {
+  background: rgba(30, 41, 59, 0.8) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  font-family: monospace !important;
+  font-size: 11px !important;
+}

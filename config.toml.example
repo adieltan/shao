@@ -1,0 +1,53 @@
+# ==============================================================================
+# Shao (哨兵) - Server Telemetry & Monitoring Sentinel Configuration
+# ==============================================================================
+
+[server]
+# The network address and port to bind the dashboard web server
+host = "0.0.0.0"
+port = 8080
+
+# Telemetry sampling interval in milliseconds (default: 1000ms, ultra-fast: 500ms)
+polling_interval_ms = 1000
+
+# SQLite database file path for 7-day rolling historical metrics
+db_path = "shao.db"
+
+# Number of days to keep historical metrics before pruning
+history_retention_days = 7
+
+[power]
+# Electricity cost per kWh (used to calculate live financial running costs)
+kwh_cost = 0.15
+currency_symbol = "$"
+
+[network]
+# Interfaces to categorize under "Local Home LAN"
+lan_interfaces = ["enp2s0", "eth0", "wlp3s0", "wlan0", "en0"]
+
+# Interfaces to categorize under "Remote VPN / Mesh"
+vpn_interfaces = ["tailscale0", "wg0", "tun0", "utun"]
+
+# ==============================================================================
+# Custom Application Cards (App Launcher & Health Indicators)
+# ==============================================================================
+
+[[apps]]
+name = "Immich"
+url = "http://192.168.1.1:2283"
+description = "Photo & Video Server"
+icon = "image"
+container = "immich_server"
+
+[[apps]]
+name = "Dockge"
+url = "http://192.168.1.1:5001"
+description = "Container Stack Manager"
+icon = "layers"
+container = "dockge"
+
+[[apps]]
+name = "Tailscale"
+url = "https://login.tailscale.com/admin/machines"
+description = "Encrypted Mesh VPN"
+icon = "shield"

@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shao (哨兵) - Server Sentinel</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              400: '#818cf8',
+              500: '#6366f1',
+              600: '#4f46e5',
+            },
+            surface: {
+              card: 'rgba(15, 23, 42, 0.75)',
+              border: 'rgba(255, 255, 255, 0.08)',
+              hover: 'rgba(30, 41, 59, 0.8)',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-[#0b0f19] text-slate-100 min-h-screen font-sans antialiased selection:bg-brand-500 selection:text-white">
+
+  <!-- Background Ambient Glow -->
+  <div class="fixed inset-0 overflow-hidden pointer-events-none z-0">
+    <div class="absolute -top-40 -left-40 w-96 h-96 bg-brand-600/15 rounded-full blur-3xl"></div>
+    <div class="absolute top-1/3 -right-40 w-96 h-96 bg-cyan-600/10 rounded-full blur-3xl"></div>
+    <div class="absolute -bottom-40 left-1/3 w-96 h-96 bg-emerald-600/10 rounded-full blur-3xl"></div>
+  </div>
+
+  <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+    <!-- Top Navigation / Header -->
+    <header class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 rounded-2xl bg-surface-card border border-surface-border backdrop-blur-xl shadow-2xl">
+      <div class="flex items-center gap-3">
+        <div class="p-2.5 rounded-xl bg-gradient-to-br from-brand-500 to-cyan-500 text-white shadow-lg shadow-brand-500/20">
+          <i data-lucide="shield" class="w-7 h-7"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-xl font-bold tracking-tight text-white">Shao</h1>
+            <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-brand-500/20 text-brand-400 border border-brand-500/30">哨兵 Sentinel</span>
+          </div>
+          <p class="text-xs text-slate-400 font-mono" id="server-host">linux-server • Ubuntu 26.04</p>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-4 text-xs font-medium">
+        <!-- Live SSE Status Pill -->
+        <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span id="connection-status">LIVE 1.0s</span>
+        </div>
+
+        <!-- Uptime Counter -->
+        <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-800/60 border border-slate-700/50 text-slate-300">
+          <i data-lucide="clock" class="w-3.5 h-3.5 text-slate-400"></i>
+          <span>Uptime: <strong id="uptime-display" class="text-white font-mono">--</strong></span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Speedometer Gauges Row (Fan, Thermal, Power) -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      
+      <!-- Fan Speed Dial -->
+      <div class="p-5 rounded-2xl bg-surface-card border border-surface-border backdrop-blur-xl shadow-xl flex flex-col justify-between">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-2 text-slate-300 font-semibold text-sm">
+            <i data-lucide="fan" class="w-4 h-4 text-cyan-400 animate-spin-slow"></i>
+            <span>Motherboard Fan</span>
+          </div>
+          <span class="text-xs font-mono text-cyan-400 px-2 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/20">hwmon</span>
+        </div>
+        <div id="gauge-fan" class="flex justify-center -my-2"></div>
+        <div class="flex justify-between text-xs text-slate-400 pt-2 border-t border-white/5 font-mono">
+          <span>Target Floor: 2,300 RPM</span>
+          <span id="fan-subtext">Whisper Quiet</span>
+        </div>
+      </div>
+
+      <!-- CPU Thermal Dial -->
+      <div class="p-5 rounded-2xl bg-surface-card border border-surface-border backdrop-blur-xl shadow-xl flex flex-col justify-between">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-2 text-slate-300 font-semibold text-sm">
+            <i data-lucide="thermometer" class="w-4 h-4 text-emerald-400"></i>
+            <span>CPU Temperature</span>
+          </div>
+          <span class="text-xs font-mono text-emerald-400 px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">thermal_zone</span>
+        </div>
+        <div id="gauge-temp" class="flex justify-center -my-2"></div>
+        <div class="flex justify-between text-xs text-slate-400 pt-2 border-t border-white/5 font-mono">
+          <span>Limit: 100°C</span>
+          <span id="temp-status" class="text-emerald-400 font-semibold">Optimal</span>
+        </div>
+      </div>
+
+      <!-- Real-Time RAPL Power Dial -->
+      <div class="p-5 rounded-2xl bg-surface-card border border-surface-border backdrop-blur-xl shadow-xl flex flex-col justify-between">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-2 text-slate-300 font-semibold text-sm">
+            <i data-lucide="zap" class="w-4 h-4 text-amber-400"></i>
+            <span>Intel RAPL Power Draw</span>
+          </div>
+          <span class="text-xs font-mono text-amber-400 px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20">powercap</span>
+        </div>
+        <div id="gauge-power" class="flex justify-center -my-2"></div>
+        <div class="flex justify-between text-xs text-slate-400 pt-2 border-t border-white/5 font-mono">
+          <span>Est. Cost: <strong id="cost-month" class="text-white">$0.14</strong>/mo</span>
+          <span><strong id="cost-year" class="text-white">$1.72</strong>/yr</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Core Metrics Cards Grid (CPU, RAM, LAN Bandwidth, VPN Bandwidth) -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      
+      <!-- CPU Load Card -->
+      <div class="p-4 rounded-2xl bg-surface-card border border-surface-border backdrop-blur-xl hover:border-brand-500/40 transition">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-semibold uppercase text-slate-400">Processor Load</span>
+          <i data-lucide="cpu" class="w-4 h-4 text-brand-400"></i>
+        </div>
+        <div class="flex items-baseline gap-2">
+          <span id="cpu-percent" class="text-2xl font-bold font-mono text-white">0.0%</span>
+          <span id="cpu-mhz" class="text-xs text-slate-400 font-mono">@ 800 MHz</span>
+        </div>
+        <div class="w-full bg-slate-800 rounded-full h-1.5 mt-3 overflow-hidden">
+          <div id="cpu-bar" class="bg-gradient-to-r from-brand-500 to-cyan-400 h-1.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <!-- RAM Memory Card -->
+      <div class="p-4 rounded-2xl bg-surface-card border border-surface-border backdrop-blur-xl hover:border-brand-500/40 transition">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-semibold uppercase text-slate-400">System Memory</span>
+          <i data-lucide="hard-drive" class="w-4 h-4 text-purple-400"></i>
+        </div>
+        <div class="flex items-baseline gap-2">
+          <span id="mem-percent" class="text-2xl font-bold font-mono text-white">0.0%</span>
+          <span id="mem-human" class="text-xs text-slate-400 font-mono">0.0 / 0.0 GB</span>
+        </div>
+        <div class="w-full bg-slate-800 rounded-full h-1.5 mt-3 overflow-hidden">
+          <div id="mem-bar" class="bg-gradient-to-r from-purple-500 to-pink-500 h-1.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <!-- Local LAN Traffic Card -->
+      <div class="p-4 rounded-2xl bg-surface-card border border-surface-border backdrop-blur-xl hover:border-brand-500/40 transition">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-semibold uppercase text-slate-400">Local Home LAN</span>
+          <i data-lucide="network" class="w-4 h-4 text-emerald-400"></i>
+        </div>
+        <div class="flex flex-col">
+          <div class="text-sm font-bold font-mono text-emerald-400 flex items-center gap-1">
+            <i data-lucide="arrow-down" class="w-3.5 h-3.5"></i> <span id="lan-rx">0 B/s</span>
+            <i data-lucide="arrow-up" class="w-3.5 h-3.5 ml-2 text-cyan-400"></i> <span id="lan-tx" class="text-cyan-400">0 B/s</span>
+          </div>
+          <span id="lan-total" class="text-xs text-slate-400 font-mono mt-1">Total: 0.0 GB</span>
+        </div>
+      </div>
+
+      <!-- Remote VPN Traffic Card -->
+      <div class="p-4 rounded-2xl bg-surface-card border border-surface-border backdrop-blur-xl hover:border-brand-500/40 transition">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-semibold uppercase text-slate-400">Tailscale Remote VPN</span>
+          <i data-lucide="lock" class="w-4 h-4 text-amber-400"></i>
+        </div>
+        <div class="flex flex-col">
+          <div class="text-sm font-bold font-mono text-amber-400 flex items-center gap-1">
+            <i data-lucide="arrow-down" class="w-3.5 h-3.5"></i> <span id="vpn-rx">0 B/s</span>
+            <i data-lucide="arrow-up" class="w-3.5 h-3.5 ml-2 text-rose-400"></i> <span id="vpn-tx" class="text-rose-400">0 B/s</span>
+          </div>
+          <span id="vpn-total" class="text-xs text-slate-400 font-mono mt-1">Total: 0.0 GB</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Real-Time Time-Series Charts -->
+    <div class="p-6 rounded-2xl bg-surface-card border border-surface-border backdrop-blur-xl shadow-xl space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-white/5">
+        <div>
+          <h2 class="text-base font-bold text-white flex items-center gap-2">
+            <i data-lucide="activity" class="w-4 h-4 text-brand-400"></i>
+            Live Telemetry & Historical Trends
+          </h2>
+          <p class="text-xs text-slate-400">Continuous hardware time-series stream</p>
+        </div>
+
+        <!-- Range Buttons -->
+        <div class="inline-flex rounded-lg bg-slate-900/80 p-1 border border-slate-700/50 text-xs font-medium" id="chart-ranges">
+          <button data-seconds="60" class="range-btn px-2.5 py-1 rounded-md bg-brand-500 text-white font-semibold shadow">Live</button>
+          <button data-seconds="900" class="range-btn px-2.5 py-1 rounded-md text-slate-400 hover:text-white transition">15m</button>
+          <button data-seconds="3600" class="range-btn px-2.5 py-1 rounded-md text-slate-400 hover:text-white transition">1h</button>
+          <button data-seconds="21600" class="range-btn px-2.5 py-1 rounded-md text-slate-400 hover:text-white transition">6h</button>
+          <button data-seconds="86400" class="range-btn px-2.5 py-1 rounded-md text-slate-400 hover:text-white transition">24h</button>
+          <button data-seconds="604800" class="range-btn px-2.5 py-1 rounded-md text-slate-400 hover:text-white transition">7d</button>
+        </div>
+      </div>
+
+      <!-- Chart Canvas -->
+      <div id="chart-telemetry" class="w-full h-72"></div>
+    </div>
+
+    <!-- App Launcher & Docker Health Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      
+      <!-- Application Tiles (Configured Apps) -->
+      <div class="lg:col-span-1 p-5 rounded-2xl bg-surface-card border border-surface-border backdrop-blur-xl shadow-xl flex flex-col space-y-4">
+        <h3 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+          <i data-lucide="layout-grid" class="w-4 h-4 text-brand-400"></i>
+          App Launcher
+        </h3>
+        <div id="app-cards-container" class="space-y-3">
+          <!-- Populated by app.js -->
+        </div>
+      </div>
+
+      <!-- Docker Container Health Grid -->
+      <div class="lg:col-span-2 p-5 rounded-2xl bg-surface-card border border-surface-border backdrop-blur-xl shadow-xl flex flex-col space-y-4">
+        <div class="flex items-center justify-between">
+          <h3 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+            <i data-lucide="container" class="w-4 h-4 text-cyan-400"></i>
+            Docker Containers (<span id="container-count">0</span>)
+          </h3>
+          <span class="text-xs text-slate-400 font-mono">/var/run/docker.sock</span>
+        </div>
+        <div id="docker-container-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-80 overflow-y-auto pr-1">
+          <!-- Populated by app.js -->
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Footer -->
+    <footer class="text-center text-xs text-slate-500 py-4 font-mono">
+      Shao (哨兵) v0.1.0 • High-Performance Rust Telemetry Sentinel • Open Source on <a href="https://github.com/adieltan/shao" target="_blank" class="text-brand-400 hover:underline">GitHub</a>
+    </footer>
+
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    lucide.createIcons();
+  </script>
+</body>
+</html>
