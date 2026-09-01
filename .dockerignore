@@ -1,0 +1,6 @@
+target/
+.git
+.github
+*.db
+*.db-journal
+*.log

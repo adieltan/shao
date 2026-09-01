@@ -1,5 +1,5 @@
 # Multi-stage ultra-lightweight build
-FROM rust:1.80-alpine AS builder
+FROM rust:alpine AS builder
 
 RUN apk add --no-cache musl-dev sqlite-dev build-base
 
@@ -9,7 +9,7 @@ COPY . .
 RUN cargo build --release
 
 # Final runtime image (< 15 MB)
-FROM alpine:3.20
+FROM alpine:latest
 
 RUN apk add --no-cache ca-certificates tzdata
 
