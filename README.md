@@ -6,7 +6,7 @@
 
 [![Rust](https://img.shields.io/badge/Language-Rust%202021-orange.svg?style=flat-square&logo=rust)](https://www.rust-lang.org)
 [![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg?style=flat-square&logo=docker)](https://github.com/adieltan/shao/pkgs/container/shao)
-[![License](https://img.shields.io/badge/License-MIT%20OR%20Apache--2.0-blue.svg?style=flat-square)](LICENSE)
+[![License](https://img.shields.io/badge/License-Apache--2.0-blue.svg?style=flat-square)](LICENSE)
 [![Memory Footprint](https://img.shields.io/badge/RAM%20Usage-%3C%205%20MB-emerald.svg?style=flat-square)](#-benchmarks)
 [![Binary Size](https://img.shields.io/badge/Binary%20Size-~4%20MB%20(Single%20File)-purple.svg?style=flat-square)](#-features)
 
@@ -189,8 +189,4 @@ sudo systemctl enable --now shao.service
 
 ## 📄 License
 
-Dual-licensed under either of:
-- [Apache License, Version 2.0](http://www.apache.org/licenses/LICENSE-2.0)
-- [MIT License](http://opensource.org/licenses/MIT)
-
-at your option.
+Licensed under the [Apache License, Version 2.0](LICENSE).
