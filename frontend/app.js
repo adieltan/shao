@@ -3,14 +3,14 @@
 // ==============================================================================
 
 let fanGauge, tempGauge, powerGauge;
-let chartPowerTemp, chartCpu, chartNetwork;
+let chartCpu, chartFanTemp, chartPower, chartNetwork;
 let isLiveStreaming = true;
 let rollingHistory = [];
 const MAX_LIVE_POINTS = 60;
 
 document.addEventListener('DOMContentLoaded', async () => {
   initGauges();
-  initSeparatedCharts();
+  initDedicatedCharts();
   setupRangeButtons();
   await loadConfig();
   connectSSE();
@@ -106,12 +106,12 @@ function initGauges() {
   powerGauge.render();
 }
 
-// 2. Separated Dedicated Time-Series Charts
-function initSeparatedCharts() {
+// 2. Dedicated Purpose-Built Time-Series Charts
+function initDedicatedCharts() {
   const commonChartConfig = {
     chart: {
       type: 'area',
-      height: 200,
+      height: 190,
       fontFamily: 'inherit',
       background: 'transparent',
       toolbar: { show: false },
@@ -138,34 +138,7 @@ function initSeparatedCharts() {
     tooltip: { theme: 'dark', x: { format: 'HH:mm:ss' } }
   };
 
-  // Chart 1: Power & Thermals
-  chartPowerTemp = new ApexCharts(document.querySelector("#chart-power-temp"), {
-    ...commonChartConfig,
-    colors: ['#f59e0b', '#10b981'],
-    yaxis: [
-      {
-        seriesName: 'Power Draw (W)',
-        title: { text: 'Power (W)', style: { color: '#f59e0b', fontSize: '10px' } },
-        min: 0,
-        labels: { style: { colors: '#64748b' }, formatter: (v) => `${v.toFixed(1)}W` }
-      },
-      {
-        seriesName: 'CPU Temp (°C)',
-        opposite: true,
-        title: { text: 'Temp (°C)', style: { color: '#10b981', fontSize: '10px' } },
-        min: 20,
-        max: 100,
-        labels: { style: { colors: '#64748b' }, formatter: (v) => `${Math.round(v)}°C` }
-      }
-    ],
-    series: [
-      { name: 'Power Draw (W)', data: [] },
-      { name: 'CPU Temp (°C)', data: [] }
-    ]
-  });
-  chartPowerTemp.render();
-
-  // Chart 2: CPU Utilization
+  // Graph 1: CPU Utilisation
   chartCpu = new ApexCharts(document.querySelector("#chart-cpu"), {
     ...commonChartConfig,
     colors: ['#6366f1'],
@@ -181,12 +154,56 @@ function initSeparatedCharts() {
   });
   chartCpu.render();
 
-  // Chart 3: Network Throughput
+  // Graph 2: Fan Speed (RPM) & CPU Temp (°C)
+  chartFanTemp = new ApexCharts(document.querySelector("#chart-fan-temp"), {
+    ...commonChartConfig,
+    colors: ['#22d3ee', '#10b981'],
+    yaxis: [
+      {
+        seriesName: 'Fan Speed (RPM)',
+        title: { text: 'Fan (RPM)', style: { color: '#22d3ee', fontSize: '10px' } },
+        min: 0,
+        max: 5000,
+        labels: { style: { colors: '#64748b' }, formatter: (v) => `${Math.round(v)}` }
+      },
+      {
+        seriesName: 'CPU Temp (°C)',
+        opposite: true,
+        title: { text: 'Temp (°C)', style: { color: '#10b981', fontSize: '10px' } },
+        min: 20,
+        max: 100,
+        labels: { style: { colors: '#64748b' }, formatter: (v) => `${Math.round(v)}°C` }
+      }
+    ],
+    series: [
+      { name: 'Fan Speed (RPM)', data: [] },
+      { name: 'CPU Temp (°C)', data: [] }
+    ]
+  });
+  chartFanTemp.render();
+
+  // Graph 3: Power Draw (Watts)
+  chartPower = new ApexCharts(document.querySelector("#chart-power"), {
+    ...commonChartConfig,
+    colors: ['#f59e0b'],
+    yaxis: {
+      title: { text: 'Power (W)', style: { color: '#f59e0b', fontSize: '10px' } },
+      min: 0,
+      labels: { style: { colors: '#64748b' }, formatter: (v) => `${v.toFixed(1)}W` }
+    },
+    series: [
+      { name: 'Power Draw (W)', data: [] }
+    ]
+  });
+  chartPower.render();
+
+  // Graph 4: Network Throughput (Home LAN vs Tailscale VPN)
   chartNetwork = new ApexCharts(document.querySelector("#chart-network"), {
     ...commonChartConfig,
+    height: 200,
     colors: ['#10b981', '#06b6d4', '#f59e0b', '#f43f5e'],
     yaxis: {
-      title: { text: 'Speed', style: { color: '#10b981', fontSize: '10px' } },
+      title: { text: 'Throughput', style: { color: '#10b981', fontSize: '10px' } },
       min: 0,
       labels: {
         style: { colors: '#64748b' },
@@ -263,16 +280,25 @@ function updateDashboard(data) {
   // Immich Stats
   if (data.immich) {
     document.getElementById('immich-photos').textContent = `${data.immich.photos.toLocaleString()} photos`;
-    document.getElementById('immich-videos').textContent = `${data.immich.videos.toLocaleString()} videos`;
-    document.getElementById('immich-storage').textContent = `Storage: ${data.immich.usage_human}`;
+    document.getElementById('immich-videos').textContent = `${data.immich.videos.toLocaleString()} vids`;
+    document.getElementById('immich-storage').textContent = `${data.immich.usage_human}`;
     document.getElementById('immich-user').textContent = data.immich.user_name;
   }
 
   // Dockge Stats
   if (data.dockge) {
     document.getElementById('dockge-stacks').textContent = `${data.dockge.active_stacks} Stacks`;
-    document.getElementById('dockge-containers').textContent = `${data.dockge.running_containers} Running`;
+    document.getElementById('dockge-containers').textContent = `${data.dockge.running_containers} Run`;
   }
+
+  // Network Cards
+  document.getElementById('lan-rx').textContent = data.network.lan_rx_speed_human;
+  document.getElementById('lan-tx').textContent = data.network.lan_tx_speed_human;
+  document.getElementById('lan-total').textContent = `${data.network.lan_combined_total_human} Total`;
+
+  document.getElementById('vpn-rx').textContent = data.network.vpn_rx_speed_human;
+  document.getElementById('vpn-tx').textContent = data.network.vpn_tx_speed_human;
+  document.getElementById('vpn-total').textContent = `${data.network.vpn_combined_total_human} Total`;
 
   // Speedometer Gauges
   const fanPct = Math.min((data.thermals.fan_rpm / 5000.0) * 100.0, 100);
@@ -296,6 +322,9 @@ function updateDashboard(data) {
   powerGauge.updateSeries([Math.round(watts * 10)]);
   document.getElementById('cost-month').textContent = data.power.estimated_monthly_cost;
   document.getElementById('cost-year').textContent = data.power.estimated_annual_cost;
+  document.getElementById('energy-today').textContent = data.power.energy_today_human;
+  document.getElementById('energy-month').textContent = data.power.energy_month_human;
+  document.getElementById('energy-year').textContent = data.power.energy_year_human;
 
   // Real-Time Streaming Charts
   if (isLiveStreaming) {
@@ -303,8 +332,9 @@ function updateDashboard(data) {
     rollingHistory.push({
       timestamp,
       cpu: data.cpu.total_usage_percent,
-      power: data.power.current_watts,
+      fan: data.thermals.fan_rpm,
       temp: data.thermals.cpu_temp_celsius,
+      power: data.power.current_watts,
       lan_rx: data.network.lan_rx_speed_bps,
       lan_tx: data.network.lan_tx_speed_bps,
       vpn_rx: data.network.vpn_rx_speed_bps,
@@ -315,15 +345,23 @@ function updateDashboard(data) {
       rollingHistory.shift();
     }
 
-    chartPowerTemp.updateSeries([
-      { name: 'Power Draw (W)', data: rollingHistory.map(p => [p.timestamp, p.power]) },
-      { name: 'CPU Temp (°C)', data: rollingHistory.map(p => [p.timestamp, p.temp]) }
-    ]);
-
+    // Graph 1: CPU Utilisation
     chartCpu.updateSeries([
       { name: 'CPU Load (%)', data: rollingHistory.map(p => [p.timestamp, p.cpu]) }
     ]);
 
+    // Graph 2: Fan Speed & CPU Temp
+    chartFanTemp.updateSeries([
+      { name: 'Fan Speed (RPM)', data: rollingHistory.map(p => [p.timestamp, p.fan]) },
+      { name: 'CPU Temp (°C)', data: rollingHistory.map(p => [p.timestamp, p.temp]) }
+    ]);
+
+    // Graph 3: Power Draw
+    chartPower.updateSeries([
+      { name: 'Power Draw (W)', data: rollingHistory.map(p => [p.timestamp, p.power]) }
+    ]);
+
+    // Graph 4: Network
     chartNetwork.updateSeries([
       { name: 'LAN Download (B/s)', data: rollingHistory.map(p => [p.timestamp, p.lan_rx]) },
       { name: 'LAN Upload (B/s)', data: rollingHistory.map(p => [p.timestamp, p.lan_tx]) },
@@ -446,13 +484,17 @@ async function fetchHistoricalData(seconds) {
     const points = await res.json();
     if (!points || points.length === 0) return;
 
-    chartPowerTemp.updateSeries([
-      { name: 'Power Draw (W)', data: points.map(p => [p.timestamp * 1000, p.power_watts]) },
+    chartCpu.updateSeries([
+      { name: 'CPU Load (%)', data: points.map(p => [p.timestamp * 1000, p.cpu_usage]) }
+    ]);
+
+    chartFanTemp.updateSeries([
+      { name: 'Fan Speed (RPM)', data: points.map(p => [p.timestamp * 1000, p.fan_rpm]) },
       { name: 'CPU Temp (°C)', data: points.map(p => [p.timestamp * 1000, p.cpu_temp]) }
     ]);
 
-    chartCpu.updateSeries([
-      { name: 'CPU Load (%)', data: points.map(p => [p.timestamp * 1000, p.cpu_usage]) }
+    chartPower.updateSeries([
+      { name: 'Power Draw (W)', data: points.map(p => [p.timestamp * 1000, p.power_watts]) }
     ]);
 
     chartNetwork.updateSeries([

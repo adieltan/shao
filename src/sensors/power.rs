@@ -5,9 +5,10 @@ use std::time::Instant;
 #[derive(Debug, Clone, Serialize)]
 pub struct PowerMetrics {
     pub current_watts: f32,
-    pub energy_today_kwh: f64,
-    pub energy_month_kwh: f64,
-    pub energy_year_kwh: f64,
+    pub energy_today_wh: f64,
+    pub energy_today_human: String,
+    pub energy_month_human: String,
+    pub energy_year_human: String,
     pub estimated_monthly_cost: String,
     pub estimated_annual_cost: String,
     pub is_rapl_supported: bool,
@@ -82,19 +83,27 @@ impl PowerCollector {
             }
         }
 
-        // Calculate projections & totals
-        let today_kwh = (current_watts as f64 * 24.0) / 1000.0;
+        // Energy calculations
+        let today_wh = (current_watts as f64) * 24.0;
+        let today_kwh = today_wh / 1000.0;
         let month_kwh = today_kwh * 30.0;
         let year_kwh = today_kwh * 365.0;
 
         let monthly_cost = month_kwh * self.kwh_cost;
         let annual_cost = year_kwh * self.kwh_cost;
 
+        let energy_today_human = if today_wh < 1000.0 {
+            format!("{:.1} Wh", today_wh)
+        } else {
+            format!("{:.2} kWh", today_kwh)
+        };
+
         PowerMetrics {
             current_watts: (current_watts * 100.0).round() / 100.0,
-            energy_today_kwh: (today_kwh * 1000.0).round() / 1000.0,
-            energy_month_kwh: (month_kwh * 100.0).round() / 100.0,
-            energy_year_kwh: (year_kwh * 10.0).round() / 10.0,
+            energy_today_wh: (today_wh * 10.0).round() / 10.0,
+            energy_today_human,
+            energy_month_human: format!("{:.2} kWh", month_kwh),
+            energy_year_human: format!("{:.1} kWh", year_kwh),
             estimated_monthly_cost: format!("{}{:.2}", self.currency, monthly_cost),
             estimated_annual_cost: format!("{}{:.2}", self.currency, annual_cost),
             is_rapl_supported: is_supported,

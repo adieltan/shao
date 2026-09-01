@@ -107,19 +107,38 @@
         </div>
       </div>
 
-      <!-- Real-Time RAPL Power Dial -->
+      <!-- Real-Time RAPL Power & Energy Dial -->
       <div class="p-5 rounded-2xl bg-surface-card border border-surface-border backdrop-blur-xl shadow-xl flex flex-col justify-between">
-        <div class="flex items-center justify-between mb-2">
+        <div class="flex items-center justify-between mb-1">
           <div class="flex items-center gap-2 text-slate-300 font-semibold text-sm">
             <i data-lucide="zap" class="w-4 h-4 text-amber-400"></i>
-            <span>Intel RAPL Power Draw</span>
+            <span>Power & Energy</span>
           </div>
           <span class="text-xs font-mono text-amber-400 px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20">powercap</span>
         </div>
-        <div id="gauge-power" class="flex justify-center -my-2"></div>
-        <div class="flex justify-between text-xs text-slate-400 pt-2 border-t border-white/5 font-mono">
-          <span>Est. Cost: <strong id="cost-month" class="text-white">$0.14</strong>/mo</span>
-          <span><strong id="cost-year" class="text-white">$1.72</strong>/yr</span>
+        
+        <div id="gauge-power" class="flex justify-center -my-3"></div>
+        
+        <!-- Detailed Energy Stats Breakdown -->
+        <div class="space-y-1.5 pt-2 border-t border-white/5 font-mono text-xs">
+          <div class="grid grid-cols-3 text-center gap-1 text-[11px] pb-1">
+            <div class="bg-slate-900/60 p-1.5 rounded-lg border border-slate-800">
+              <span class="text-slate-400 block text-[9px] uppercase">Today</span>
+              <strong id="energy-today" class="text-amber-400">-- Wh</strong>
+            </div>
+            <div class="bg-slate-900/60 p-1.5 rounded-lg border border-slate-800">
+              <span class="text-slate-400 block text-[9px] uppercase">This Month</span>
+              <strong id="energy-month" class="text-amber-300">-- kWh</strong>
+            </div>
+            <div class="bg-slate-900/60 p-1.5 rounded-lg border border-slate-800">
+              <span class="text-slate-400 block text-[9px] uppercase">This Year</span>
+              <strong id="energy-year" class="text-amber-200">-- kWh</strong>
+            </div>
+          </div>
+          <div class="flex justify-between text-slate-400 text-[11px]">
+            <span>Est. Cost: <strong id="cost-month" class="text-white">$0.14</strong>/mo</span>
+            <span><strong id="cost-year" class="text-white">$1.72</strong>/yr</span>
+          </div>
         </div>
       </div>
 
@@ -220,15 +239,15 @@
 
     </div>
 
-    <!-- Separated Dedicated History Graphs Section -->
+    <!-- Dedicated History Graphs Section -->
     <div class="space-y-4">
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-1">
         <div>
           <h2 class="text-base font-bold text-white flex items-center gap-2">
             <i data-lucide="activity" class="w-4 h-4 text-brand-400"></i>
-            Historical Telemetry Trends
+            Real-Time Hardware & Network Analytics
           </h2>
-          <p class="text-xs text-slate-400">Separated modular time-series panels</p>
+          <p class="text-xs text-slate-400">Dedicated time-series telemetry streams</p>
         </div>
 
         <!-- Range Buttons -->
@@ -242,46 +261,118 @@
         </div>
       </div>
 
-      <!-- 2-Panel Separated Graphs Grid -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <!-- 3-Column Dedicated Graphs Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        <!-- Graph 1: Power Draw (Watts) & Thermals (°C) -->
-        <div class="p-5 rounded-2xl bg-surface-card border border-surface-border backdrop-blur-xl shadow-xl space-y-2">
-          <div class="flex items-center justify-between pb-2 border-b border-white/5">
-            <h3 class="text-xs font-bold uppercase text-slate-300 flex items-center gap-2">
-              <i data-lucide="zap" class="w-4 h-4 text-amber-400"></i>
-              Power Draw (Watts) & CPU Temperature (°C)
-            </h3>
-            <span class="text-[10px] text-slate-400 font-mono">RAPL & Hwmon</span>
-          </div>
-          <div id="chart-power-temp" class="w-full h-56"></div>
-        </div>
-
-        <!-- Graph 2: CPU Load (%) & Clock Frequency (MHz) -->
+        <!-- Graph 1: CPU Utilisation -->
         <div class="p-5 rounded-2xl bg-surface-card border border-surface-border backdrop-blur-xl shadow-xl space-y-2">
           <div class="flex items-center justify-between pb-2 border-b border-white/5">
             <h3 class="text-xs font-bold uppercase text-slate-300 flex items-center gap-2">
               <i data-lucide="cpu" class="w-4 h-4 text-brand-400"></i>
-              CPU Utilization (%) & Dynamic Governor
+              CPU Utilisation (%)
             </h3>
-            <span class="text-[10px] text-slate-400 font-mono">400 - 3100 MHz</span>
+            <span class="text-[10px] text-slate-400 font-mono">Load Stream</span>
           </div>
-          <div id="chart-cpu" class="w-full h-56"></div>
+          <div id="chart-cpu" class="w-full h-52"></div>
         </div>
 
-        <!-- Graph 3: Network Bandwidth (Home LAN vs Remote VPN) -->
-        <div class="lg:col-span-2 p-5 rounded-2xl bg-surface-card border border-surface-border backdrop-blur-xl shadow-xl space-y-2">
+        <!-- Graph 2: Fan Speed with CPU Temp (Combined Physical Correlation) -->
+        <div class="p-5 rounded-2xl bg-surface-card border border-surface-border backdrop-blur-xl shadow-xl space-y-2">
           <div class="flex items-center justify-between pb-2 border-b border-white/5">
             <h3 class="text-xs font-bold uppercase text-slate-300 flex items-center gap-2">
-              <i data-lucide="network" class="w-4 h-4 text-emerald-400"></i>
-              Network Throughput: Local Home LAN vs. Remote Tailscale VPN
+              <i data-lucide="fan" class="w-4 h-4 text-cyan-400"></i>
+              Fan Speed (RPM) & CPU Temp (°C)
             </h3>
-            <span class="text-[10px] text-slate-400 font-mono">enp2s0 / wlp3s0 vs. tailscale0</span>
+            <span class="text-[10px] text-slate-400 font-mono">Acoustics & Thermals</span>
           </div>
-          <div id="chart-network" class="w-full h-56"></div>
+          <div id="chart-fan-temp" class="w-full h-52"></div>
+        </div>
+
+        <!-- Graph 3: Intel RAPL Power Draw -->
+        <div class="p-5 rounded-2xl bg-surface-card border border-surface-border backdrop-blur-xl shadow-xl space-y-2">
+          <div class="flex items-center justify-between pb-2 border-b border-white/5">
+            <h3 class="text-xs font-bold uppercase text-slate-300 flex items-center gap-2">
+              <i data-lucide="zap" class="w-4 h-4 text-amber-400"></i>
+              Power Draw (Watts)
+            </h3>
+            <span class="text-[10px] text-slate-400 font-mono">Intel RAPL</span>
+          </div>
+          <div id="chart-power" class="w-full h-52"></div>
         </div>
 
       </div>
+
+      <!-- Network Section: Cards Alongside Graph -->
+      <div class="p-5 rounded-2xl bg-surface-card border border-surface-border backdrop-blur-xl shadow-xl space-y-4">
+        <div class="flex items-center justify-between pb-2 border-b border-white/5">
+          <h3 class="text-xs font-bold uppercase text-slate-300 flex items-center gap-2">
+            <i data-lucide="network" class="w-4 h-4 text-emerald-400"></i>
+            Network Throughput & Interface Traffic
+          </h3>
+          <span class="text-[10px] text-slate-400 font-mono">Local Home LAN vs. Tailscale VPN</span>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-center">
+          
+          <!-- Network Cards (Left Column) -->
+          <div class="lg:col-span-1 space-y-3">
+            
+            <!-- Local Home LAN Card -->
+            <div class="p-4 rounded-xl bg-slate-900/70 border border-slate-800 hover:border-emerald-500/40 transition">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-semibold uppercase text-slate-300 flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                  Local LAN
+                </span>
+                <span class="text-[10px] font-mono text-emerald-400 px-1.5 py-0.5 rounded bg-emerald-500/10">enp2s0 / wlp3s0</span>
+              </div>
+              <div class="flex items-center justify-between text-xs font-mono font-bold">
+                <span class="text-emerald-400 flex items-center gap-1">
+                  ↓ <span id="lan-rx">0 B/s</span>
+                </span>
+                <span class="text-cyan-400 flex items-center gap-1">
+                  ↑ <span id="lan-tx">0 B/s</span>
+                </span>
+              </div>
+              <div class="flex items-center justify-between text-[11px] text-slate-400 font-mono mt-2 pt-2 border-t border-white/5">
+                <span>Total Traffic:</span>
+                <strong id="lan-total" class="text-white">0.0 GB Total</strong>
+              </div>
+            </div>
+
+            <!-- Tailscale Remote VPN Card -->
+            <div class="p-4 rounded-xl bg-slate-900/70 border border-slate-800 hover:border-amber-500/40 transition">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-semibold uppercase text-slate-300 flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+                  Remote VPN
+                </span>
+                <span class="text-[10px] font-mono text-amber-400 px-1.5 py-0.5 rounded bg-amber-500/10">tailscale0</span>
+              </div>
+              <div class="flex items-center justify-between text-xs font-mono font-bold">
+                <span class="text-amber-400 flex items-center gap-1">
+                  ↓ <span id="vpn-rx">0 B/s</span>
+                </span>
+                <span class="text-rose-400 flex items-center gap-1">
+                  ↑ <span id="vpn-tx">0 B/s</span>
+                </span>
+              </div>
+              <div class="flex items-center justify-between text-[11px] text-slate-400 font-mono mt-2 pt-2 border-t border-white/5">
+                <span>Total Traffic:</span>
+                <strong id="vpn-total" class="text-white">0.0 GB Total</strong>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Network Graph (Right 2 Columns) -->
+          <div class="lg:col-span-2">
+            <div id="chart-network" class="w-full h-56"></div>
+          </div>
+
+        </div>
+      </div>
+
     </div>
 
     <!-- App Launcher & Docker Health Section -->

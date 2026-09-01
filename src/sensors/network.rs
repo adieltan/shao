@@ -12,6 +12,7 @@ pub struct NetworkMetrics {
     pub lan_tx_speed_human: String,
     pub lan_rx_total_human: String,
     pub lan_tx_total_human: String,
+    pub lan_combined_total_human: String,
 
     pub vpn_rx_speed_bps: f64,
     pub vpn_tx_speed_bps: f64,
@@ -19,6 +20,7 @@ pub struct NetworkMetrics {
     pub vpn_tx_speed_human: String,
     pub vpn_rx_total_human: String,
     pub vpn_tx_total_human: String,
+    pub vpn_combined_total_human: String,
 
     pub interfaces: Vec<InterfaceDetail>,
 }
@@ -114,6 +116,7 @@ impl NetworkCollector {
             lan_tx_speed_human: format_speed(lan_tx_spd),
             lan_rx_total_human: format_bytes(lan_rx_tot),
             lan_tx_total_human: format_bytes(lan_tx_tot),
+            lan_combined_total_human: format_bytes(lan_rx_tot + lan_tx_tot),
 
             vpn_rx_speed_bps: vpn_rx_spd,
             vpn_tx_speed_bps: vpn_tx_spd,
@@ -121,6 +124,7 @@ impl NetworkCollector {
             vpn_tx_speed_human: format_speed(vpn_tx_spd),
             vpn_rx_total_human: format_bytes(vpn_rx_tot),
             vpn_tx_total_human: format_bytes(vpn_tx_tot),
+            vpn_combined_total_human: format_bytes(vpn_rx_tot + vpn_tx_tot),
 
             interfaces: interface_details,
         }
