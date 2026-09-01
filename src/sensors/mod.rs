@@ -1,10 +1,12 @@
 pub mod cpu;
+pub mod disk;
 pub mod memory;
 pub mod network;
 pub mod power;
 pub mod thermals;
 
 use cpu::{CpuCollector, CpuMetrics};
+use disk::{DiskCollector, DiskMetrics};
 use memory::{MemoryCollector, MemoryMetrics};
 use network::{NetworkCollector, NetworkMetrics};
 use power::{PowerCollector, PowerMetrics};
@@ -32,6 +34,7 @@ pub struct FullTelemetry {
     pub system: SystemSummary,
     pub cpu: CpuMetrics,
     pub memory: MemoryMetrics,
+    pub disk: DiskMetrics,
     pub thermals: ThermalMetrics,
     pub power: PowerMetrics,
     pub network: NetworkMetrics,
@@ -43,6 +46,7 @@ pub struct FullTelemetry {
 pub struct SensorManager {
     cpu: CpuCollector,
     memory: MemoryCollector,
+    disk: DiskCollector,
     thermals: ThermalCollector,
     power: PowerCollector,
     network: NetworkCollector,
@@ -53,6 +57,7 @@ impl SensorManager {
         Self {
             cpu: CpuCollector::new(),
             memory: MemoryCollector::new(),
+            disk: DiskCollector::new(),
             thermals: ThermalCollector::new(),
             power: PowerCollector::new(config.power.kwh_cost, config.power.currency_symbol.clone()),
             network: NetworkCollector::new(
@@ -98,6 +103,7 @@ impl SensorManager {
             system,
             cpu: self.cpu.collect(),
             memory: self.memory.collect(),
+            disk: self.disk.collect(),
             thermals: self.thermals.collect(),
             power: self.power.collect(),
             network: self.network.collect(),

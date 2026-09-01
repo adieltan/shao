@@ -252,6 +252,14 @@ function updateDashboard(data) {
   document.getElementById('mem-human').textContent = `${usedGb} / ${totalGb} GB`;
   document.getElementById('mem-bar').style.width = `${Math.min(data.memory.usage_percent, 100)}%`;
 
+  // Disk Storage
+  if (data.disk) {
+    document.getElementById('disk-percent').textContent = `${data.disk.usage_percent.toFixed(1)}%`;
+    document.getElementById('disk-human').textContent = `${data.disk.used_human} / ${data.disk.total_human}`;
+    document.getElementById('disk-bar').style.width = `${Math.min(data.disk.usage_percent, 100)}%`;
+    document.getElementById('disk-free').textContent = `Free: ${data.disk.available_human}`;
+  }
+
   // Immich Stats
   if (data.immich) {
     document.getElementById('immich-photos').textContent = `${data.immich.photos.toLocaleString()} photos`;

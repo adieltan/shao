@@ -125,18 +125,20 @@
 
     </div>
 
-    <!-- Core Metrics & Live Stats Cards Grid -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <!-- Core Metrics & Live Stats Cards Grid (5-Card Row) -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
       
       <!-- CPU Load & Clock Card -->
-      <div class="p-4 rounded-2xl bg-surface-card border border-surface-border backdrop-blur-xl hover:border-brand-500/40 transition">
-        <div class="flex items-center justify-between mb-2">
-          <span class="text-xs font-semibold uppercase text-slate-400">CPU Load & Clock</span>
-          <i data-lucide="cpu" class="w-4 h-4 text-brand-400"></i>
-        </div>
-        <div class="flex items-baseline justify-between">
-          <span id="cpu-percent" class="text-2xl font-bold font-mono text-white">0.0%</span>
-          <span id="cpu-mhz-badge" class="px-2 py-0.5 text-xs font-mono font-bold rounded bg-brand-500/20 text-brand-300 border border-brand-500/30">800 MHz</span>
+      <div class="p-4 rounded-2xl bg-surface-card border border-surface-border backdrop-blur-xl hover:border-brand-500/40 transition flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-semibold uppercase text-slate-400">Processor</span>
+            <i data-lucide="cpu" class="w-4 h-4 text-brand-400"></i>
+          </div>
+          <div class="flex items-baseline justify-between">
+            <span id="cpu-percent" class="text-xl font-bold font-mono text-white">0.0%</span>
+            <span id="cpu-mhz-badge" class="px-1.5 py-0.5 text-[11px] font-mono font-bold rounded bg-brand-500/20 text-brand-300 border border-brand-500/30">800 MHz</span>
+          </div>
         </div>
         <div class="w-full bg-slate-800 rounded-full h-1.5 mt-3 overflow-hidden">
           <div id="cpu-bar" class="bg-gradient-to-r from-brand-500 to-cyan-400 h-1.5 rounded-full transition-all duration-300" style="width: 0%"></div>
@@ -144,49 +146,75 @@
       </div>
 
       <!-- RAM Memory Card -->
-      <div class="p-4 rounded-2xl bg-surface-card border border-surface-border backdrop-blur-xl hover:border-brand-500/40 transition">
-        <div class="flex items-center justify-between mb-2">
-          <span class="text-xs font-semibold uppercase text-slate-400">System Memory</span>
-          <i data-lucide="hard-drive" class="w-4 h-4 text-purple-400"></i>
-        </div>
-        <div class="flex items-baseline justify-between">
-          <span id="mem-percent" class="text-2xl font-bold font-mono text-white">0.0%</span>
-          <span id="mem-human" class="text-xs text-slate-400 font-mono">0.0 / 0.0 GB</span>
+      <div class="p-4 rounded-2xl bg-surface-card border border-surface-border backdrop-blur-xl hover:border-brand-500/40 transition flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-semibold uppercase text-slate-400">RAM Memory</span>
+            <i data-lucide="hard-drive" class="w-4 h-4 text-purple-400"></i>
+          </div>
+          <div class="flex items-baseline justify-between">
+            <span id="mem-percent" class="text-xl font-bold font-mono text-white">0.0%</span>
+            <span id="mem-human" class="text-[11px] text-slate-400 font-mono">0.0 / 0.0 GB</span>
+          </div>
         </div>
         <div class="w-full bg-slate-800 rounded-full h-1.5 mt-3 overflow-hidden">
           <div id="mem-bar" class="bg-gradient-to-r from-purple-500 to-pink-500 h-1.5 rounded-full transition-all duration-300" style="width: 0%"></div>
         </div>
       </div>
 
+      <!-- Disk Storage Card -->
+      <div class="p-4 rounded-2xl bg-surface-card border border-surface-border backdrop-blur-xl hover:border-brand-500/40 transition flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-semibold uppercase text-slate-400">Disk Storage</span>
+            <i data-lucide="disc" class="w-4 h-4 text-rose-400"></i>
+          </div>
+          <div class="flex items-baseline justify-between">
+            <span id="disk-percent" class="text-xl font-bold font-mono text-white">0.0%</span>
+            <span id="disk-human" class="text-[11px] text-slate-400 font-mono">0 / 0 GB</span>
+          </div>
+        </div>
+        <div>
+          <div class="w-full bg-slate-800 rounded-full h-1.5 mt-3 overflow-hidden">
+            <div id="disk-bar" class="bg-gradient-to-r from-amber-500 to-rose-500 h-1.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+          </div>
+          <span id="disk-free" class="text-[10px] text-slate-400 font-mono block mt-1">Free: -- GB</span>
+        </div>
+      </div>
+
       <!-- Immich Live Stats Card -->
-      <div class="p-4 rounded-2xl bg-surface-card border border-surface-border backdrop-blur-xl hover:border-brand-500/40 transition">
-        <div class="flex items-center justify-between mb-2">
-          <span class="text-xs font-semibold uppercase text-slate-400">Immich Library</span>
-          <i data-lucide="image" class="w-4 h-4 text-cyan-400"></i>
+      <div class="p-4 rounded-2xl bg-surface-card border border-surface-border backdrop-blur-xl hover:border-brand-500/40 transition flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-semibold uppercase text-slate-400">Immich</span>
+            <i data-lucide="image" class="w-4 h-4 text-cyan-400"></i>
+          </div>
+          <div class="flex items-baseline justify-between">
+            <span id="immich-photos" class="text-lg font-bold font-mono text-white">--</span>
+            <span id="immich-videos" class="text-[11px] text-slate-400 font-mono">-- vids</span>
+          </div>
         </div>
-        <div class="flex items-baseline justify-between">
-          <span id="immich-photos" class="text-xl font-bold font-mono text-white">--</span>
-          <span id="immich-videos" class="text-xs text-slate-400 font-mono">-- videos</span>
-        </div>
-        <div class="flex items-center justify-between text-xs text-cyan-300 font-mono mt-2">
-          <span id="immich-storage">Storage: -- GB</span>
-          <span id="immich-user" class="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400">User</span>
+        <div class="flex items-center justify-between text-[11px] text-cyan-300 font-mono mt-2">
+          <span id="immich-storage">-- GB</span>
+          <span id="immich-user" class="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400 font-semibold">User</span>
         </div>
       </div>
 
       <!-- Dockge & Stacks Stats Card -->
-      <div class="p-4 rounded-2xl bg-surface-card border border-surface-border backdrop-blur-xl hover:border-brand-500/40 transition">
-        <div class="flex items-center justify-between mb-2">
-          <span class="text-xs font-semibold uppercase text-slate-400">Dockge Stacks</span>
-          <i data-lucide="layers" class="w-4 h-4 text-emerald-400"></i>
+      <div class="p-4 rounded-2xl bg-surface-card border border-surface-border backdrop-blur-xl hover:border-brand-500/40 transition flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-semibold uppercase text-slate-400">Dockge</span>
+            <i data-lucide="layers" class="w-4 h-4 text-emerald-400"></i>
+          </div>
+          <div class="flex items-baseline justify-between">
+            <span id="dockge-stacks" class="text-lg font-bold font-mono text-white">--</span>
+            <span id="dockge-containers" class="text-[11px] text-emerald-400 font-mono font-semibold">-- Run</span>
+          </div>
         </div>
-        <div class="flex items-baseline justify-between">
-          <span id="dockge-stacks" class="text-xl font-bold font-mono text-white">--</span>
-          <span id="dockge-containers" class="text-xs text-emerald-400 font-mono font-semibold">-- Running</span>
-        </div>
-        <div class="text-xs text-slate-400 font-mono mt-2 flex items-center gap-1.5">
+        <div class="text-[11px] text-slate-400 font-mono mt-2 flex items-center gap-1.5">
           <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span>Compose Engine Online</span>
+          <span>Compose Active</span>
         </div>
       </div>
 
