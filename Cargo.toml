@@ -1,6 +1,6 @@
 [package]
 name = "shao"
-version = "0.1.3"
+version = "0.1.4"
 edition = "2021"
 authors = ["Adiel Tan <adieltan@users.noreply.github.com>"]
 description = "Shao (哨兵) - Ultra-lightweight, single-binary Linux server telemetry & monitoring sentinel in Rust"
@@ -38,13 +38,6 @@ mime_guess = "2.0"
 
 # CLI Parsing
 clap = { version = "4.5", features = ["derive"] }
-
-[profile.release]
-opt-level = 3
-lto = true
-codegen-units = 1
-panic = "abort"
-strip = true
 
 [profile.release]
 opt-level = 3

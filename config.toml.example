@@ -20,19 +20,19 @@ api_key = "cdqs89jBjvSacX7oQR2tuLIejWLHdx1ZeazuU20JU"
 [[apps]]
 name = "Immich"
 url = "http://192.168.1.1:2283"
-description = "Photo & Video Backup Server"
-icon = "image"
+description = "Photo & Video Server"
+icon = "immich"
 container = "immich_server"
 
 [[apps]]
 name = "Dockge"
 url = "http://192.168.1.1:5001"
-description = "Docker Compose Stack Manager"
-icon = "layers"
+description = "Stack Manager"
+icon = "dockge"
 container = "dockge"
 
 [[apps]]
 name = "Tailscale"
 url = "https://login.tailscale.com/admin/machines"
-description = "Encrypted Mesh VPN"
-icon = "shield"
+description = "Mesh VPN"
+icon = "tailscale"

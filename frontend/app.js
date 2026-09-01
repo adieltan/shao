@@ -432,7 +432,6 @@ function buildSeriesWithGaps(points, extractor, maxExpectedIntervalMs) {
 function renderAllCharts(points) {
   if (!points || points.length === 0) return;
 
-  // Expected sampling interval based on active time window
   const expectedIntervalMs = Math.max(
     (activeTimeWindowSeconds * 1000) / 120,
     500
@@ -496,8 +495,42 @@ function updateDockerContainers(containers) {
 }
 
 // -----------------------------------------------------------------------------
-// 6. Load Config & Apps (Icon + Name Only Shortcuts)
+// 6. Real Brand Icons & App Launcher
 // -----------------------------------------------------------------------------
+function getAppIconHtml(iconKey, appName) {
+  const knownBrandIcons = {
+    'immich': 'https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/immich.png',
+    'dockge': 'https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/dockge.png',
+    'tailscale': 'https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/tailscale.png',
+    'portainer': 'https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/portainer.png',
+    'jellyfin': 'https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/jellyfin.png',
+    'plex': 'https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/plex.png',
+    'home-assistant': 'https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/home-assistant.png',
+    'homebridge': 'https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/homebridge.png',
+    'adguard': 'https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/adguard-home.png',
+    'pihole': 'https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/pi-hole.png',
+    'vaultwarden': 'https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/vaultwarden.png',
+    'syncthing': 'https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/syncthing.png',
+    'wireguard': 'https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/wireguard.png',
+    'nextcloud': 'https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/nextcloud.png',
+  };
+
+  const key = (iconKey || appName || '').toLowerCase().trim();
+
+  // If icon is direct URL
+  if (iconKey && (iconKey.startsWith('http://') || iconKey.startsWith('https://') || iconKey.startsWith('/'))) {
+    return `<img src="${iconKey}" class="w-6 h-6 object-contain rounded-md shadow-sm" alt="${appName}" onerror="this.src='https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/generic.png'" />`;
+  }
+
+  // If known brand
+  if (knownBrandIcons[key]) {
+    return `<img src="${knownBrandIcons[key]}" class="w-6 h-6 object-contain rounded-md shadow-sm" alt="${appName}" />`;
+  }
+
+  // Lucide fallback
+  return `<i data-lucide="${iconKey || 'globe'}" class="w-5 h-5 text-brand-400"></i>`;
+}
+
 async function loadConfig() {
   try {
     const res = await fetch('/api/config');
@@ -518,18 +551,20 @@ async function loadConfig() {
         }
       }
 
+      const iconHtml = getAppIconHtml(app.icon, app.name);
+
       const tile = document.createElement('a');
       tile.href = targetUrl;
       tile.target = '_blank';
       tile.className = 'p-3.5 rounded-xl bg-slate-900/70 border border-slate-800 flex items-center justify-between hover:border-brand-500/50 hover:bg-slate-800/80 transition group';
       tile.innerHTML = `
         <div class="flex items-center gap-3">
-          <div class="p-2 rounded-lg bg-brand-500/10 text-brand-400 group-hover:bg-brand-500 group-hover:text-white transition">
-            <i data-lucide="${app.icon || 'globe'}" class="w-4 h-4"></i>
+          <div class="p-2 rounded-xl bg-slate-800/80 border border-white/5 flex items-center justify-center group-hover:scale-105 transition">
+            ${iconHtml}
           </div>
           <h4 class="text-sm font-bold text-white group-hover:text-brand-300 transition">${app.name}</h4>
         </div>
-        <i data-lucide="external-link" class="w-3.5 h-3.5 text-slate-500 group-hover:text-brand-400 transition"></i>
+        <i data-lucide="external-link" class="w-4 h-4 text-slate-500 group-hover:text-brand-400 transition"></i>
       `;
       container.appendChild(tile);
     });
