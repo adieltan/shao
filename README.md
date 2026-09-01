@@ -5,13 +5,14 @@
 **The Ultra-Lightweight, Single-Binary Linux Server Sentinel & Telemetry Dashboard**
 
 [![Rust](https://img.shields.io/badge/Language-Rust%202021-orange.svg?style=flat-square&logo=rust)](https://www.rust-lang.org)
+[![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg?style=flat-square&logo=docker)](https://github.com/adieltan/shao/pkgs/container/shao)
 [![License](https://img.shields.io/badge/License-MIT%20OR%20Apache--2.0-blue.svg?style=flat-square)](LICENSE)
 [![Memory Footprint](https://img.shields.io/badge/RAM%20Usage-%3C%205%20MB-emerald.svg?style=flat-square)](#-benchmarks)
-[![Binary Size](https://img.shields.io/badge/Binary%20Size-~5%20MB%20(Single%20File)-purple.svg?style=flat-square)](#-features)
+[![Binary Size](https://img.shields.io/badge/Binary%20Size-~4%20MB%20(Single%20File)-purple.svg?style=flat-square)](#-features)
 
 *Shao (哨兵 - Sentinel) is a high-performance, zero-bloat server monitoring engine and glassmorphism web dashboard compiled into a single static binary. It provides sub-millisecond hardware telemetry, real-time power analytics, and Docker health tracking using under 5 MB of RAM.*
 
-[Features](#-key-features) • [Quick Start](#-quick-start) • [Configuration](#-configuration) • [Benchmarks](#-benchmarks) • [Architecture](#-architecture)
+[Features](#-key-features) • [Quick Start](#-quick-start) • [Run in Docker](#-run-in-docker-shortcuts) • [Configuration](#-configuration) • [Benchmarks](#-benchmarks) • [Architecture](#-architecture)
 
 </div>
 
@@ -19,7 +20,7 @@
 
 ## ✨ Key Features
 
-- **⚡ Zero Bloat & Single Binary:** Compiled in 100% Rust. Web frontend, SQLite database, and telemetry engine are all baked into one single `~5MB` standalone executable.
+- **⚡ Zero Bloat & Single Binary:** Compiled in 100% Rust. Web frontend, SQLite database, and telemetry engine are all baked into one single `~4MB` standalone executable.
 - **🔋 Intel RAPL & AMD Powercap Telemetry:** Reads hardware energy microjoule registers directly to provide live power draw (Watts), cumulative energy (Wh / kWh), and real-time financial running costs.
 - **🌀 Motherboard Fan & Thermal Dials:** Auto-discovers motherboard tachometers and thermal zones across `/sys/class/hwmon` (e.g. Asus, Lenovo, Dell, Supermicro).
 - **🌐 Network Traffic Separation:** Automatically differentiates between **Local Home LAN** (Ethernet/Wi-Fi) and **Remote VPN / Mesh Networks** (Tailscale, WireGuard).
@@ -29,18 +30,53 @@
 
 ---
 
-## 📊 Benchmarks vs. Traditional Monitoring
+## 🐳 Run in Docker (Shortcuts)
 
-| Tool | RAM Usage | Startup Time | Dependencies | Web UI |
-| :--- | :--- | :--- | :--- | :--- |
-| **🛡️ Shao (哨兵)** | **~4.2 MB** | **< 2 ms** | **0 (Single Binary)** | **Included (Embedded)** |
-| **Glances** | ~35 MB | ~800 ms | Python, psutil | Included |
-| **Netdata** | ~65 MB | ~1.5 s | C runtime, plugins | Included |
-| **Grafana + Prometheus Stack** | ~140 MB | ~5.0 s | 3-4 Docker Containers | Separate Services |
+### 1. One-Line Docker Run
+```bash
+docker run -d \
+  --name shao \
+  --restart unless-stopped \
+  -p 8888:8080 \
+  -v /proc:/host/proc:ro \
+  -v /sys:/sys:ro \
+  -v /var/run/docker.sock:/var/run/docker.sock:ro \
+  -v shao_data:/app \
+  ghcr.io/adieltan/shao:latest
+```
+
+### 2. Docker Compose / Dockge (`docker-compose.yml`)
+```yaml
+services:
+  shao:
+    image: ghcr.io/adieltan/shao:latest
+    container_name: shao
+    restart: unless-stopped
+    ports:
+      - "8888:8080"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/sys:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./config.toml:/app/config.toml:ro
+      - shao_data:/app
+    environment:
+      - RUST_LOG=info
+
+volumes:
+  shao_data:
+```
+
+Start the stack:
+```bash
+docker compose up -d
+```
+
+Open **`http://localhost:8888`** to access your dashboard immediately!
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Native Quick Start (No Docker Required)
 
 ### 1. Build from Source
 ```bash
@@ -61,7 +97,16 @@ cp config.toml.example config.toml
 ./target/release/shao --config config.toml
 ```
 
-Open your browser at **`http://localhost:8080`** (or your server's IP) to view the live dashboard!
+---
+
+## 📊 Benchmarks vs. Traditional Monitoring
+
+| Tool | RAM Usage | Startup Time | Dependencies | Web UI |
+| :--- | :--- | :--- | :--- | :--- |
+| **🛡️ Shao (哨兵)** | **~2.1 MB** | **< 2 ms** | **0 (Single Binary)** | **Included (Embedded)** |
+| **Glances** | ~35 MB | ~800 ms | Python, psutil | Included |
+| **Netdata** | ~65 MB | ~1.5 s | C runtime, plugins | Included |
+| **Grafana + Prometheus Stack** | ~140 MB | ~5.0 s | 3-4 Docker Containers | Separate Services |
 
 ---
 

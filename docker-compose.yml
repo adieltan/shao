@@ -1,0 +1,19 @@
+services:
+  shao:
+    build: .
+    image: shao:latest
+    container_name: shao
+    restart: unless-stopped
+    ports:
+      - "8888:8080"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/sys:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./config.toml:/app/config.toml:ro
+      - shao_data:/app/data
+    environment:
+      - RUST_LOG=info
+
+volumes:
+  shao_data:
