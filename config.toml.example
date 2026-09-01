@@ -20,23 +20,16 @@ api_key = "cdqs89jBjvSacX7oQR2tuLIejWLHdx1ZeazuU20JU"
 [[apps]]
 name = "Immich"
 url = "http://192.168.1.1:2283"
-description = "Photo & Video Server"
+description = "Photo & Video Backup Server"
 icon = "image"
 container = "immich_server"
 
 [[apps]]
 name = "Dockge"
 url = "http://192.168.1.1:5001"
-description = "Compose Stacks Portal"
+description = "Docker Compose Stack Manager"
 icon = "layers"
 container = "dockge"
-
-[[apps]]
-name = "Homepage"
-url = "http://192.168.1.1:3000"
-description = "App Launchpad"
-icon = "layout-grid"
-container = "homepage"
 
 [[apps]]
 name = "Tailscale"
