@@ -328,8 +328,21 @@ async function loadConfig() {
     container.innerHTML = '';
 
     (cfg.apps || []).forEach(app => {
+      // Smart dynamic host resolution for local & remote VPN
+      let targetUrl = app.url;
+      try {
+        const parsed = new URL(app.url, window.location.origin);
+        if (parsed.hostname === '192.168.1.1' || parsed.hostname === '192.168.1.17' || parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1' || parsed.hostname === 'a456u') {
+          targetUrl = `${window.location.protocol}//${window.location.hostname}:${parsed.port}${parsed.pathname}${parsed.search}`;
+        }
+      } catch (err) {
+        if (app.url.startsWith(':')) {
+          targetUrl = `${window.location.protocol}//${window.location.hostname}${app.url}`;
+        }
+      }
+
       const tile = document.createElement('a');
-      tile.href = app.url;
+      tile.href = targetUrl;
       tile.target = '_blank';
       tile.className = 'p-3 rounded-xl bg-slate-900/60 border border-slate-800 flex items-center justify-between hover:border-brand-500/50 hover:bg-slate-800/80 transition group';
       tile.innerHTML = `
