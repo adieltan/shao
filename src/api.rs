@@ -1,6 +1,7 @@
 use crate::config::Config;
 use crate::db::Database;
 use crate::sensors::FullTelemetry;
+use crate::system::{execute_power_action, PowerAction};
 use axum::{
     extract::{Query, State},
     http::{header, HeaderValue, StatusCode, Uri},
@@ -8,11 +9,11 @@ use axum::{
         sse::{Event, Sse},
         IntoResponse, Response,
     },
-    routing::get,
+    routing::{get, post},
     Json, Router,
 };
 use rust_embed::RustEmbed;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::convert::Infallible;
 use std::sync::Arc;
 use tokio::sync::{broadcast, RwLock};
@@ -37,15 +38,35 @@ pub struct HistoryQuery {
     pub seconds: Option<i64>,
 }
 
+#[derive(Serialize)]
+pub struct SystemActionResponse {
+    pub success: bool,
+    pub message: String,
+}
+
 pub fn create_router(state: AppState) -> Router {
     Router::new()
+        .route("/api/ping", get(ping_handler).head(ping_handler))
         .route("/api/telemetry", get(get_telemetry))
         .route("/api/history", get(get_history))
         .route("/api/config", get(get_config))
         .route("/api/stream", get(stream_sse))
+        .route("/api/system/shutdown", post(system_shutdown))
+        .route("/api/system/reboot", post(system_reboot))
         .fallback(static_handler)
         .layer(CorsLayer::permissive())
         .with_state(state)
+}
+
+async fn ping_handler() -> impl IntoResponse {
+    (
+        StatusCode::OK,
+        [
+            (header::CACHE_CONTROL, HeaderValue::from_static("no-store, no-cache, must-revalidate")),
+            (header::CONTENT_TYPE, HeaderValue::from_static("text/plain")),
+        ],
+        "pong",
+    )
 }
 
 async fn get_telemetry(State(state): State<AppState>) -> impl IntoResponse {
@@ -76,6 +97,54 @@ async fn get_config(State(state): State<AppState>) -> impl IntoResponse {
     Json(state.config).into_response()
 }
 
+async fn system_shutdown(State(state): State<AppState>) -> impl IntoResponse {
+    if !state.config.server.enable_shutdown {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(SystemActionResponse {
+                success: false,
+                message: "Shutdown is disabled in server configuration".into(),
+            }),
+        )
+            .into_response();
+    }
+
+    execute_power_action(PowerAction::Shutdown);
+
+    (
+        StatusCode::OK,
+        Json(SystemActionResponse {
+            success: true,
+            message: "Server shutdown sequence initiated".into(),
+        }),
+    )
+        .into_response()
+}
+
+async fn system_reboot(State(state): State<AppState>) -> impl IntoResponse {
+    if !state.config.server.enable_shutdown {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(SystemActionResponse {
+                success: false,
+                message: "Reboot is disabled in server configuration".into(),
+            }),
+        )
+            .into_response();
+    }
+
+    execute_power_action(PowerAction::Reboot);
+
+    (
+        StatusCode::OK,
+        Json(SystemActionResponse {
+            success: true,
+            message: "Server reboot sequence initiated".into(),
+        }),
+    )
+        .into_response()
+}
+
 async fn stream_sse(State(state): State<AppState>) -> Sse<impl tokio_stream::Stream<Item = Result<Event, Infallible>>> {
     let rx = state.tx.subscribe();
     let stream = BroadcastStream::new(rx).filter_map(|msg| match msg {
@@ -102,7 +171,10 @@ async fn static_handler(uri: Uri) -> Response {
         Some(content) => {
             let mime = mime_guess::from_path(&path).first_or_octet_stream();
             (
-                [(header::CONTENT_TYPE, HeaderValue::from_str(mime.as_ref()).unwrap())],
+                [
+                    (header::CONTENT_TYPE, HeaderValue::from_str(mime.as_ref()).unwrap()),
+                    (header::CACHE_CONTROL, HeaderValue::from_static("no-cache, must-revalidate")),
+                ],
                 content.data,
             )
                 .into_response()
@@ -111,7 +183,10 @@ async fn static_handler(uri: Uri) -> Response {
             // Fallback to index.html for SPA routing
             if let Some(index) = Assets::get("index.html") {
                 (
-                    [(header::CONTENT_TYPE, HeaderValue::from_static("text/html; charset=utf-8"))],
+                    [
+                        (header::CONTENT_TYPE, HeaderValue::from_static("text/html; charset=utf-8")),
+                        (header::CACHE_CONTROL, HeaderValue::from_static("no-cache, must-revalidate")),
+                    ],
                     index.data,
                 )
                     .into_response()
@@ -119,5 +194,195 @@ async fn static_handler(uri: Uri) -> Response {
                 (StatusCode::NOT_FOUND, "404 Not Found").into_response()
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::body::Body;
+    use axum::http::{Request, StatusCode};
+    use tower::ServiceExt;
+
+    #[tokio::test]
+    async fn test_shutdown_endpoint_when_disabled() {
+        let mut config = Config::default();
+        config.server.enable_shutdown = false;
+        let db = Database::new(":memory:").unwrap();
+        let latest = Arc::new(RwLock::new(None));
+        let (tx, _rx) = broadcast::channel(10);
+
+        let state = AppState {
+            config,
+            db,
+            latest,
+            tx,
+        };
+
+        let app = create_router(state);
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/system/shutdown")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+    }
+
+    #[tokio::test]
+    async fn test_reboot_endpoint_when_disabled() {
+        let mut config = Config::default();
+        config.server.enable_shutdown = false;
+        let db = Database::new(":memory:").unwrap();
+        let latest = Arc::new(RwLock::new(None));
+        let (tx, _rx) = broadcast::channel(10);
+
+        let state = AppState {
+            config,
+            db,
+            latest,
+            tx,
+        };
+
+        let app = create_router(state);
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/system/reboot")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+    }
+
+    #[tokio::test]
+    async fn test_shutdown_endpoint_when_enabled() {
+        let config = Config::default(); // enable_shutdown defaults to true
+        let db = Database::new(":memory:").unwrap();
+        let latest = Arc::new(RwLock::new(None));
+        let (tx, _rx) = broadcast::channel(10);
+
+        let state = AppState {
+            config,
+            db,
+            latest,
+            tx,
+        };
+
+        let app = create_router(state);
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/system/shutdown")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn test_reboot_endpoint_when_enabled() {
+        let config = Config::default(); // enable_shutdown defaults to true
+        let db = Database::new(":memory:").unwrap();
+        let latest = Arc::new(RwLock::new(None));
+        let (tx, _rx) = broadcast::channel(10);
+
+        let state = AppState {
+            config,
+            db,
+            latest,
+            tx,
+        };
+
+        let app = create_router(state);
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/system/reboot")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn test_get_config_includes_shutdown_flag() {
+        let config = Config::default();
+        let db = Database::new(":memory:").unwrap();
+        let latest = Arc::new(RwLock::new(None));
+        let (tx, _rx) = broadcast::channel(10);
+
+        let state = AppState {
+            config,
+            db,
+            latest,
+            tx,
+        };
+
+        let app = create_router(state);
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/api/config")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn test_ping_endpoint() {
+        let config = Config::default();
+        let db = Database::new(":memory:").unwrap();
+        let latest = Arc::new(RwLock::new(None));
+        let (tx, _rx) = broadcast::channel(10);
+
+        let state = AppState {
+            config,
+            db,
+            latest,
+            tx,
+        };
+
+        let app = create_router(state);
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/api/ping")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
     }
 }

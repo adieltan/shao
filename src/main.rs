@@ -6,6 +6,7 @@ mod dockge;
 mod docker;
 mod immich;
 mod sensors;
+mod system;
 
 use api::{create_router, AppState};
 use clap::Parser;
@@ -19,7 +20,12 @@ use tracing::{info, Level};
 use tracing_subscriber::FmtSubscriber;
 
 #[derive(Parser, Debug)]
-#[command(name = "shao", author = "Adiel Tan", version = "0.1.0", about = "Shao (哨兵) - Ultra-lightweight Linux server sentinel in Rust")]
+#[command(
+    name = "shao",
+    author = "Adiel Tan",
+    version = env!("CARGO_PKG_VERSION"),
+    about = "Shao (哨兵) - Ultra-lightweight Linux server sentinel in Rust"
+)]
 struct Args {
     /// Path to config.toml file
     #[arg(short, long)]
@@ -51,14 +57,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         config.server.host = h;
     }
 
-    println!(r#"
+    println!(
+        r#"
    _____ _                 
   / ____| |                
  | (___ | |__   __ _  ___  
   \___ \| '_ \ / _` |/ _ \ 
   ____) | | | | (_| | (_) |
- |_____/|_| |_|\__,_|\___/  (哨兵 - Sentinel v0.1.0)
-"#);
+ |_____/|_| |_|\__,_|\___/  (哨兵 - Sentinel v{})
+"#,
+        env!("CARGO_PKG_VERSION")
+    );
 
     info!("🛡️ Initializing Shao (哨兵) Server Sentinel...");
 

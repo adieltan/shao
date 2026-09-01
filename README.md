@@ -21,6 +21,8 @@
 ## ✨ Key Features
 
 - **⚡ Zero Bloat & Single Binary:** Compiled in 100% Rust. Web frontend, SQLite database, and telemetry engine are all baked into one single `~4MB` standalone executable.
+- **🔌 Host Power Management:** Safe shutdown and reboot options directly from the glassmorphic dashboard or REST API with configurable safety controls.
+- **📡 Real-Time Client ↔ Server Ping Tracker:** Live round-trip latency (ms), jitter, and connection quality tiering (LAN vs. VPN) between client viewing devices and the server.
 - **🔋 Intel RAPL & AMD Powercap Telemetry:** Reads hardware energy microjoule registers directly to provide live power draw (Watts), cumulative energy (Wh / kWh), and real-time financial running costs.
 - **🌀 Motherboard Fan & Thermal Dials:** Auto-discovers motherboard tachometers and thermal zones across `/sys/class/hwmon` (e.g. Asus, Lenovo, Dell, Supermicro).
 - **🌐 Network Traffic Separation:** Automatically differentiates between **Local Home LAN** (Ethernet/Wi-Fi) and **Remote VPN / Mesh Networks** (Tailscale, WireGuard).
@@ -41,6 +43,8 @@ docker run -d \
   -v /proc:/host/proc:ro \
   -v /sys:/sys:ro \
   -v /var/run/docker.sock:/var/run/docker.sock:ro \
+  -v /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket:ro \
+  -v /proc/sysrq-trigger:/host/proc/sysrq-trigger:rw \
   -v shao_data:/app \
   ghcr.io/adieltan/shao:latest
 ```
@@ -58,6 +62,8 @@ services:
       - /proc:/host/proc:ro
       - /sys:/sys:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket:ro
+      - /proc/sysrq-trigger:/host/proc/sysrq-trigger:rw
       - ./config.toml:/app/config.toml:ro
       - shao_data:/app
     environment:
@@ -117,6 +123,7 @@ cp config.toml.example config.toml
 host = "0.0.0.0"
 port = 8080
 polling_interval_ms = 1000   # Set to 500 for ultra-fast telemetry
+enable_shutdown = true       # Enable/disable host shutdown and reboot from UI/API
 
 [power]
 kwh_cost = 0.15              # Electricity cost per kWh

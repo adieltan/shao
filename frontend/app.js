@@ -19,7 +19,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   initGauges();
   initDedicatedCharts();
   setupRangeButtons();
+  setupPowerControls();
+  startClientPingTracker();
   await loadConfig();
+  if (window.lucide) lucide.createIcons();
   connectSSE();
   startWatchdog();
 });
@@ -309,6 +312,10 @@ function updateDashboard(data) {
   // Header & Dynamic Versioned Footer
   document.getElementById('server-host').textContent = `${data.system.hostname} • ${data.system.os_name} ${data.system.os_version}`;
   document.getElementById('uptime-display').textContent = data.system.uptime_human;
+  const powerHostname = document.getElementById('power-modal-hostname');
+  if (powerHostname && data.system.hostname) {
+    powerHostname.textContent = data.system.hostname;
+  }
   const footerVer = document.getElementById('footer-version');
   if (footerVer && data.system.version) {
     footerVer.innerHTML = `Shao (哨兵) v${data.system.version} • <a href="https://github.com/adieltan/shao" target="_blank" class="text-brand-400 hover:underline">GitHub</a>`;
@@ -569,6 +576,11 @@ async function loadConfig() {
       container.appendChild(tile);
     });
 
+    if (cfg.server && cfg.server.enable_shutdown === false) {
+      const powerBtn = document.getElementById('power-btn');
+      if (powerBtn) powerBtn.style.display = 'none';
+    }
+
     lucide.createIcons();
   } catch (e) {
     console.error('Failed to load config:', e);
@@ -626,4 +638,264 @@ async function fetchHistoricalWindow(seconds) {
   } finally {
     isFetchingHistory = false;
   }
+}
+
+// -----------------------------------------------------------------------------
+// 8. System Power Controls (Shutdown & Reboot)
+// -----------------------------------------------------------------------------
+function setupPowerControls() {
+  const powerBtn = document.getElementById('power-btn');
+  const powerModal = document.getElementById('power-modal');
+  const powerModalPanel = document.getElementById('power-modal-panel');
+  const powerModalClose = document.getElementById('power-modal-close');
+  const powerModalCancel = document.getElementById('power-modal-cancel');
+  const btnShutdown = document.getElementById('btn-action-shutdown');
+  const btnReboot = document.getElementById('btn-action-reboot');
+  const statusMsg = document.getElementById('power-modal-status');
+
+  if (!powerBtn || !powerModal) return;
+
+  function openModal() {
+    if (statusMsg) {
+      statusMsg.className = 'hidden p-3 rounded-xl text-xs font-mono';
+      statusMsg.textContent = '';
+    }
+    if (btnShutdown) {
+      btnShutdown.disabled = false;
+      btnShutdown.classList.remove('opacity-50', 'cursor-not-allowed');
+    }
+    if (btnReboot) {
+      btnReboot.disabled = false;
+      btnReboot.classList.remove('opacity-50', 'cursor-not-allowed');
+    }
+
+    powerModal.classList.remove('opacity-0', 'pointer-events-none');
+    powerModal.classList.add('opacity-100');
+    if (powerModalPanel) {
+      powerModalPanel.classList.remove('scale-95');
+      powerModalPanel.classList.add('scale-100');
+    }
+    if (window.lucide) lucide.createIcons();
+  }
+
+  function closeModal() {
+    powerModal.classList.remove('opacity-100');
+    powerModal.classList.add('opacity-0', 'pointer-events-none');
+    if (powerModalPanel) {
+      powerModalPanel.classList.remove('scale-100');
+      powerModalPanel.classList.add('scale-95');
+    }
+  }
+
+  powerBtn.addEventListener('click', openModal);
+  if (powerModalClose) powerModalClose.addEventListener('click', closeModal);
+  if (powerModalCancel) powerModalCancel.addEventListener('click', closeModal);
+  powerModal.addEventListener('click', (e) => {
+    if (e.target === powerModal) closeModal();
+  });
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !powerModal.classList.contains('pointer-events-none')) {
+      closeModal();
+    }
+  });
+
+  async function triggerPowerAction(action) {
+    const isShutdown = action === 'shutdown';
+    const actionLabel = isShutdown ? 'Shut Down' : 'Restart';
+
+    if (btnShutdown) {
+      btnShutdown.disabled = true;
+      btnShutdown.classList.add('opacity-50', 'cursor-not-allowed');
+    }
+    if (btnReboot) {
+      btnReboot.disabled = true;
+      btnReboot.classList.add('opacity-50', 'cursor-not-allowed');
+    }
+
+    if (statusMsg) {
+      statusMsg.className = 'p-3 rounded-xl text-xs font-mono bg-brand-500/10 text-brand-300 border border-brand-500/30 flex items-center gap-2';
+      statusMsg.innerHTML = `<span class="w-2.5 h-2.5 rounded-full bg-brand-400 animate-ping"></span> Initiating ${actionLabel.toLowerCase()} sequence...`;
+    }
+
+    try {
+      const res = await fetch(`/api/system/${action}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (res.ok && data.success) {
+        if (statusMsg) {
+          statusMsg.className = 'p-3 rounded-xl text-xs font-mono bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 flex items-center gap-2';
+          statusMsg.innerHTML = `✓ ${data.message || 'Action initiated successfully'}.`;
+        }
+
+        if (isShutdown) {
+          if (eventSource) {
+            try { eventSource.close(); } catch(e) {}
+          }
+          if (watchdogTimer) clearInterval(watchdogTimer);
+          setStatusOffline('POWERED OFF');
+        } else {
+          setStatusConnecting();
+        }
+
+        setTimeout(() => {
+          closeModal();
+        }, 2500);
+      } else {
+        if (statusMsg) {
+          statusMsg.className = 'p-3 rounded-xl text-xs font-mono bg-rose-500/10 text-rose-300 border border-rose-500/30 flex items-center gap-2';
+          statusMsg.innerHTML = `❌ ${data.message || 'Operation failed (' + res.status + ')'}`;
+        }
+        if (btnShutdown) {
+          btnShutdown.disabled = false;
+          btnShutdown.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+        if (btnReboot) {
+          btnReboot.disabled = false;
+          btnReboot.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+      }
+    } catch (err) {
+      if (statusMsg) {
+        statusMsg.className = 'p-3 rounded-xl text-xs font-mono bg-rose-500/10 text-rose-300 border border-rose-500/30 flex items-center gap-2';
+        statusMsg.innerHTML = `❌ Request failed: ${err.message}`;
+      }
+      if (btnShutdown) {
+        btnShutdown.disabled = false;
+        btnShutdown.classList.remove('opacity-50', 'cursor-not-allowed');
+      }
+      if (btnReboot) {
+        btnReboot.disabled = false;
+        btnReboot.classList.remove('opacity-50', 'cursor-not-allowed');
+      }
+    }
+  }
+
+  if (btnShutdown) {
+    btnShutdown.addEventListener('click', () => triggerPowerAction('shutdown'));
+  }
+  if (btnReboot) {
+    btnReboot.addEventListener('click', () => triggerPowerAction('reboot'));
+  }
+}
+
+// -----------------------------------------------------------------------------
+// 9. Client Device ↔ Shao Server Real-Time Ping Tracker
+// -----------------------------------------------------------------------------
+let pingHistory = [];
+let pingInterval = null;
+
+function startClientPingTracker() {
+  const pingDisplay = document.getElementById('ping-display');
+  const pingCardVal = document.getElementById('ping-card-val');
+  const pingCardDot = document.getElementById('ping-card-dot');
+  const pingTierBadge = document.getElementById('ping-tier-badge');
+  const pingJitter = document.getElementById('ping-jitter');
+  const pingMin = document.getElementById('ping-min');
+  const pingAvg = document.getElementById('ping-avg');
+  const pingMax = document.getElementById('ping-max');
+
+  async function measurePing() {
+    const t0 = performance.now();
+    try {
+      const res = await fetch('/api/ping', {
+        method: 'GET',
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache' }
+      });
+      if (res.ok) {
+        const rtt = performance.now() - t0;
+        const latency = Math.max(Math.round(rtt * 10) / 10, 0.1);
+
+        pingHistory.push(latency);
+        if (pingHistory.length > 30) {
+          pingHistory.shift();
+        }
+
+        const min = Math.min(...pingHistory);
+        const max = Math.max(...pingHistory);
+        const avg = pingHistory.reduce((a, b) => a + b, 0) / pingHistory.length;
+        const jitter = Math.abs(latency - avg);
+
+        // Color coding & connection tier categorization
+        let tierText = 'LAN';
+        let colorClass = 'text-emerald-400';
+        let badgeClass = 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
+        let dotBg = 'bg-emerald-400';
+
+        if (latency < 15) {
+          tierText = 'LAN';
+          colorClass = 'text-emerald-400';
+          badgeClass = 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
+          dotBg = 'bg-emerald-400';
+        } else if (latency < 50) {
+          tierText = 'Wi-Fi / Nearby';
+          colorClass = 'text-cyan-400';
+          badgeClass = 'text-cyan-400 bg-cyan-500/10 border-cyan-500/20';
+          dotBg = 'bg-cyan-400';
+        } else if (latency < 120) {
+          tierText = 'Remote VPN';
+          colorClass = 'text-amber-400';
+          badgeClass = 'text-amber-400 bg-amber-500/10 border-amber-500/20';
+          dotBg = 'bg-amber-400';
+        } else {
+          tierText = 'High Latency';
+          colorClass = 'text-rose-400';
+          badgeClass = 'text-rose-400 bg-rose-500/10 border-rose-500/20';
+          dotBg = 'bg-rose-400';
+        }
+
+        if (pingDisplay) {
+          pingDisplay.textContent = `${latency.toFixed(1)} ms`;
+          pingDisplay.className = `font-mono font-bold ${colorClass}`;
+        }
+        if (pingCardVal) {
+          pingCardVal.textContent = latency.toFixed(1);
+          pingCardVal.className = `text-2xl font-extrabold font-mono ${colorClass}`;
+        }
+        if (pingCardDot) {
+          pingCardDot.className = `w-2.5 h-2.5 rounded-full ${dotBg} animate-pulse`;
+        }
+        if (pingTierBadge) {
+          pingTierBadge.textContent = tierText;
+          pingTierBadge.className = `text-xs font-mono font-semibold px-2 py-0.5 rounded border ${badgeClass}`;
+        }
+        if (pingJitter) {
+          pingJitter.textContent = `±${jitter.toFixed(1)} ms jitter`;
+        }
+        if (pingMin) pingMin.textContent = `${min.toFixed(1)} ms`;
+        if (pingAvg) pingAvg.textContent = `${avg.toFixed(1)} ms`;
+        if (pingMax) pingMax.textContent = `${max.toFixed(1)} ms`;
+      } else {
+        markOffline();
+      }
+    } catch (e) {
+      markOffline();
+    }
+  }
+
+  function markOffline() {
+    if (pingDisplay) {
+      pingDisplay.textContent = '-- ms';
+      pingDisplay.className = 'font-mono font-bold text-slate-500';
+    }
+    if (pingCardVal) {
+      pingCardVal.textContent = '--';
+      pingCardVal.className = 'text-2xl font-extrabold font-mono text-slate-500';
+    }
+    if (pingCardDot) {
+      pingCardDot.className = 'w-2.5 h-2.5 rounded-full bg-rose-500';
+    }
+    if (pingTierBadge) {
+      pingTierBadge.textContent = 'Offline';
+      pingTierBadge.className = 'text-xs font-mono font-semibold px-2 py-0.5 rounded border text-rose-400 bg-rose-500/10 border-rose-500/20';
+    }
+  }
+
+  measurePing();
+  if (pingInterval) clearInterval(pingInterval);
+  pingInterval = setInterval(measurePing, 1500);
 }

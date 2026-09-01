@@ -10,6 +10,8 @@ services:
       - /proc:/host/proc:ro
       - /sys:/sys:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket:ro
+      - /proc/sysrq-trigger:/host/proc/sysrq-trigger:rw
       - ./config.toml:/app/config.toml:ro
       - shao_data:/app/data
     environment:

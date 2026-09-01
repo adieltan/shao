@@ -4,6 +4,7 @@ port = 8888
 polling_interval_ms = 500   # 0.5s ultra-fast hardware sampling
 db_path = "shao.db"
 history_retention_days = 7
+enable_shutdown = true       # Allow host shutdown/reboot controls from Web UI / API
 
 [power]
 kwh_cost = 0.15              # Electricity cost per kWh

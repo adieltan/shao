@@ -28,6 +28,8 @@ pub struct ServerConfig {
     pub db_path: String,
     #[serde(default = "default_retention_days")]
     pub history_retention_days: u32,
+    #[serde(default = "default_enable_shutdown")]
+    pub enable_shutdown: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -70,6 +72,7 @@ fn default_port() -> u16 { 8888 }
 fn default_interval() -> u64 { 1000 }
 fn default_db_path() -> String { "shao.db".to_string() }
 fn default_retention_days() -> u32 { 7 }
+fn default_enable_shutdown() -> bool { true }
 fn default_kwh_cost() -> f64 { 0.15 }
 fn default_currency() -> String { "$".to_string() }
 fn default_icon() -> String { "globe".to_string() }
@@ -95,6 +98,7 @@ impl Default for ServerConfig {
             polling_interval_ms: default_interval(),
             db_path: default_db_path(),
             history_retention_days: default_retention_days(),
+            enable_shutdown: default_enable_shutdown(),
         }
     }
 }
@@ -167,5 +171,30 @@ impl Config {
             }
         }
         Config::default()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_default_config_enable_shutdown() {
+        let config = Config::default();
+        assert!(config.server.enable_shutdown);
+    }
+
+    #[test]
+    fn test_parse_config_with_shutdown_disabled() {
+        let toml_str = r#"
+        [server]
+        host = "127.0.0.1"
+        port = 9999
+        enable_shutdown = false
+        "#;
+        let config: Config = toml::from_str(toml_str).expect("Failed to parse TOML");
+        assert_eq!(config.server.host, "127.0.0.1");
+        assert_eq!(config.server.port, 9999);
+        assert!(!config.server.enable_shutdown);
     }
 }

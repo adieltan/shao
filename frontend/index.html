@@ -57,11 +57,17 @@
         </div>
       </div>
 
-      <div class="flex flex-wrap items-center gap-4 text-xs font-medium">
+      <div class="flex flex-wrap items-center gap-2 sm:gap-3 text-xs font-medium">
         <!-- Live Dynamic SSE Status Pill -->
         <div id="status-pill" class="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 font-bold transition-all duration-300">
           <span id="status-dot" class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span>
           <span id="connection-status">CONNECTING...</span>
+        </div>
+
+        <!-- Live Client Device ↔ Server Ping Pill -->
+        <div id="ping-pill" class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-slate-800/80 border border-slate-700/60 text-slate-300 transition-all duration-200" title="Device to Shao Server Round-Trip Latency">
+          <i data-lucide="activity" class="w-4 h-4 text-emerald-400"></i>
+          <span>Ping: <strong id="ping-display" class="text-emerald-400 font-mono font-bold">-- ms</strong></span>
         </div>
 
         <!-- Uptime Counter -->
@@ -69,6 +75,12 @@
           <i data-lucide="clock" class="w-4 h-4 text-slate-400"></i>
           <span>Uptime: <strong id="uptime-display" class="text-white font-mono font-bold text-sm">--</strong></span>
         </div>
+
+        <!-- Power Controls Button -->
+        <button id="power-btn" type="button" title="System Power Controls" class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-slate-800/80 border border-slate-700/60 text-slate-300 hover:text-rose-400 hover:border-rose-500/40 hover:bg-rose-500/10 active:scale-95 transition-all duration-200 cursor-pointer">
+          <i data-lucide="power" class="w-4 h-4 text-rose-400"></i>
+          <span class="font-semibold">Power</span>
+        </button>
       </div>
     </header>
 
@@ -338,6 +350,29 @@
               </div>
             </div>
 
+            <!-- Client Device ↔ Shao Server Latency Card -->
+            <div class="p-4 rounded-xl bg-slate-900/80 border border-slate-800 hover:border-brand-500/40 transition">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-sm font-bold uppercase text-slate-200 flex items-center gap-2">
+                  <span id="ping-card-dot" class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                  Device ↔ Server Ping
+                </span>
+                <span id="ping-tier-badge" class="text-xs font-mono text-emerald-400 font-semibold px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">LAN</span>
+              </div>
+              <div class="flex items-baseline justify-between py-1">
+                <div class="flex items-baseline gap-1.5">
+                  <span id="ping-card-val" class="text-2xl font-extrabold font-mono text-emerald-400">--</span>
+                  <span class="text-xs font-mono text-slate-400">ms</span>
+                </div>
+                <span id="ping-jitter" class="text-xs font-mono text-slate-400">±0.0 ms jitter</span>
+              </div>
+              <div class="flex items-center justify-between text-xs text-slate-400 font-mono mt-2 pt-2 border-t border-white/5">
+                <span>Min: <strong id="ping-min" class="text-slate-200">-- ms</strong></span>
+                <span>Avg: <strong id="ping-avg" class="text-slate-200">-- ms</strong></span>
+                <span>Max: <strong id="ping-max" class="text-slate-200">-- ms</strong></span>
+              </div>
+            </div>
+
           </div>
 
           <!-- Network Graph (Right 2 Columns) -->
@@ -385,6 +420,61 @@
       Shao (哨兵) v0.1.0 • <a href="https://github.com/adieltan/shao" target="_blank" class="text-brand-400 hover:underline">GitHub</a>
     </footer>
 
+  </div>
+
+  <!-- Power Control Glassmorphic Modal -->
+  <div id="power-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md opacity-0 pointer-events-none transition-opacity duration-200">
+    <div id="power-modal-panel" class="relative w-full max-w-md p-6 rounded-2xl bg-slate-900/95 border border-slate-700/80 shadow-2xl space-y-5 transform scale-95 transition-transform duration-200">
+      
+      <!-- Header -->
+      <div class="flex items-center justify-between pb-3 border-b border-white/10">
+        <div class="flex items-center gap-2.5 text-white font-bold text-base">
+          <div class="p-2 rounded-xl bg-rose-500/20 text-rose-400 border border-rose-500/30">
+            <i data-lucide="power" class="w-5 h-5"></i>
+          </div>
+          <span>System Power Controls</span>
+        </div>
+        <button id="power-modal-close" type="button" class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Description -->
+      <p class="text-sm text-slate-300">
+        Select a power management action for <strong id="power-modal-hostname" class="text-white font-mono">linux-server</strong>.
+      </p>
+
+      <!-- Power Action Options -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <!-- Shutdown Button -->
+        <button id="btn-action-shutdown" type="button" class="flex flex-col items-center text-center p-4 rounded-xl bg-rose-950/40 border border-rose-900/60 hover:border-rose-500 hover:bg-rose-900/50 text-rose-200 hover:text-white transition group space-y-2 cursor-pointer">
+          <div class="p-3 rounded-full bg-rose-500/20 text-rose-400 group-hover:scale-110 group-hover:bg-rose-500/30 transition">
+            <i data-lucide="power" class="w-6 h-6"></i>
+          </div>
+          <span class="font-bold text-sm">Shut Down</span>
+          <span class="text-[11px] text-slate-400">Power off machine</span>
+        </button>
+
+        <!-- Reboot Button -->
+        <button id="btn-action-reboot" type="button" class="flex flex-col items-center text-center p-4 rounded-xl bg-amber-950/40 border border-amber-900/60 hover:border-amber-500 hover:bg-amber-900/50 text-amber-200 hover:text-white transition group space-y-2 cursor-pointer">
+          <div class="p-3 rounded-full bg-amber-500/20 text-amber-400 group-hover:scale-110 group-hover:bg-amber-500/30 transition">
+            <i data-lucide="rotate-cw" class="w-6 h-6"></i>
+          </div>
+          <span class="font-bold text-sm">Restart</span>
+          <span class="text-[11px] text-slate-400">Reboot host system</span>
+        </button>
+      </div>
+
+      <!-- Status / Feedback Banner -->
+      <div id="power-modal-status" class="hidden p-3 rounded-xl text-xs font-mono"></div>
+
+      <!-- Footer -->
+      <div class="flex justify-end pt-1">
+        <button id="power-modal-cancel" type="button" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold transition cursor-pointer">
+          Cancel
+        </button>
+      </div>
+    </div>
   </div>
 
   <script src="app.js"></script>
