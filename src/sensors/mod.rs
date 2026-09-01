@@ -9,7 +9,8 @@ use cpu::{CpuCollector, CpuMetrics};
 use disk::{DiskCollector, DiskMetrics};
 use memory::{MemoryCollector, MemoryMetrics};
 use network::{NetworkCollector, NetworkMetrics};
-use power::{PowerCollector, PowerMetrics};
+pub use power::PowerCollector;
+use power::PowerMetrics;
 use thermals::{ThermalCollector, ThermalMetrics};
 
 use crate::config::Config;
@@ -24,6 +25,7 @@ pub struct SystemSummary {
     pub hostname: String,
     pub os_name: String,
     pub os_version: String,
+    pub version: String,
     pub uptime_seconds: u64,
     pub uptime_human: String,
 }
@@ -44,12 +46,12 @@ pub struct FullTelemetry {
 }
 
 pub struct SensorManager {
-    cpu: CpuCollector,
-    memory: MemoryCollector,
-    disk: DiskCollector,
-    thermals: ThermalCollector,
-    power: PowerCollector,
-    network: NetworkCollector,
+    pub cpu: CpuCollector,
+    pub memory: MemoryCollector,
+    pub disk: DiskCollector,
+    pub thermals: ThermalCollector,
+    pub power: PowerCollector,
+    pub network: NetworkCollector,
 }
 
 impl SensorManager {
@@ -69,6 +71,7 @@ impl SensorManager {
 
     pub fn collect_all(
         &mut self,
+        power: PowerMetrics,
         containers: Vec<DockerContainer>,
         immich: Option<ImmichStats>,
         dockge: Option<DockgeStats>,
@@ -94,6 +97,7 @@ impl SensorManager {
             hostname: System::host_name().unwrap_or_else(|| "linux-server".into()),
             os_name: System::name().unwrap_or_else(|| "Linux".into()),
             os_version: System::os_version().unwrap_or_default(),
+            version: env!("CARGO_PKG_VERSION").to_string(),
             uptime_seconds: uptime,
             uptime_human,
         };
@@ -105,7 +109,7 @@ impl SensorManager {
             memory: self.memory.collect(),
             disk: self.disk.collect(),
             thermals: self.thermals.collect(),
-            power: self.power.collect(),
+            power,
             network: self.network.collect(),
             containers,
             immich,

@@ -21,7 +21,6 @@ pub struct PowerCollector {
     max_range_uj: u64,
     kwh_cost: f64,
     currency: String,
-    accumulated_uj: u64,
 }
 
 impl PowerCollector {
@@ -29,7 +28,6 @@ impl PowerCollector {
         let mut rapl_path = None;
         let mut max_range_uj = 262143328850;
 
-        // Auto-discover Intel RAPL / AMD powercap path
         for i in 0..5 {
             let p = format!("/sys/class/powercap/intel-rapl/intel-rapl:{}/energy_uj", i);
             if fs::metadata(&p).is_ok() {
@@ -51,16 +49,17 @@ impl PowerCollector {
             max_range_uj,
             kwh_cost,
             currency,
-            accumulated_uj: 0,
         }
     }
 
-    pub fn collect(&mut self) -> PowerMetrics {
+    /// Returns (current_watts, delta_uj, delta_wh, is_supported)
+    pub fn sample_raw(&mut self) -> (f32, u64, f64, bool) {
         let now = Instant::now();
         let dt = now.duration_since(self.last_time).as_secs_f64();
         self.last_time = now;
 
         let mut current_watts = 1.30;
+        let mut delta_uj = 0u64;
         let mut is_supported = false;
 
         if let Some(ref path) = self.rapl_path {
@@ -69,13 +68,12 @@ impl PowerCollector {
                     is_supported = true;
                     if let Some(last_uj) = self.last_energy_uj {
                         if dt > 0.1 && dt < 60.0 {
-                            let diff = if current_uj >= last_uj {
+                            delta_uj = if current_uj >= last_uj {
                                 current_uj - last_uj
                             } else {
                                 (self.max_range_uj - last_uj) + current_uj
                             };
-                            current_watts = (diff as f64 / (dt * 1_000_000.0)) as f32;
-                            self.accumulated_uj += diff;
+                            current_watts = (delta_uj as f64 / (dt * 1_000_000.0)) as f32;
                         }
                     }
                     self.last_energy_uj = Some(current_uj);
@@ -83,11 +81,21 @@ impl PowerCollector {
             }
         }
 
-        // Energy calculations
-        let today_wh = (current_watts as f64) * 24.0;
+        let delta_wh = (delta_uj as f64) / (1_000_000.0 * 3600.0);
+        (current_watts, delta_uj, delta_wh, is_supported)
+    }
+
+    pub fn build_metrics(
+        &self,
+        current_watts: f32,
+        today_wh: f64,
+        month_wh: f64,
+        year_wh: f64,
+        is_supported: bool,
+    ) -> PowerMetrics {
         let today_kwh = today_wh / 1000.0;
-        let month_kwh = today_kwh * 30.0;
-        let year_kwh = today_kwh * 365.0;
+        let month_kwh = month_wh / 1000.0;
+        let year_kwh = year_wh / 1000.0;
 
         let monthly_cost = month_kwh * self.kwh_cost;
         let annual_cost = year_kwh * self.kwh_cost;
@@ -98,12 +106,24 @@ impl PowerCollector {
             format!("{:.2} kWh", today_kwh)
         };
 
+        let energy_month_human = if month_wh < 1000.0 {
+            format!("{:.1} Wh", month_wh)
+        } else {
+            format!("{:.2} kWh", month_kwh)
+        };
+
+        let energy_year_human = if year_wh < 1000.0 {
+            format!("{:.1} Wh", year_wh)
+        } else {
+            format!("{:.1} kWh", year_kwh)
+        };
+
         PowerMetrics {
             current_watts: (current_watts * 100.0).round() / 100.0,
             energy_today_wh: (today_wh * 10.0).round() / 10.0,
             energy_today_human,
-            energy_month_human: format!("{:.2} kWh", month_kwh),
-            energy_year_human: format!("{:.1} kWh", year_kwh),
+            energy_month_human,
+            energy_year_human,
             estimated_monthly_cost: format!("{}{:.2}", self.currency, monthly_cost),
             estimated_annual_cost: format!("{}{:.2}", self.currency, annual_cost),
             is_rapl_supported: is_supported,

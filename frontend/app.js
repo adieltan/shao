@@ -3,10 +3,17 @@
 // ==============================================================================
 
 let fanGauge, tempGauge, powerGauge;
-let chartCpu, chartFanTemp, chartPower, chartNetwork;
-let isLiveStreaming = true;
-let rollingHistory = [];
-const MAX_LIVE_POINTS = 60;
+let chartCpu, chartPower, chartNetwork;
+
+// Continuous Rolling Window State (Supports all ranges: Live 60s, 15m, 1h, 6h, 24h, 7d)
+let activeTimeWindowSeconds = 60;
+let activeDataPoints = [];
+let isFetchingHistory = false;
+
+// Dynamic Connection Watchdog
+let eventSource = null;
+let lastMessageTimestamp = 0;
+let watchdogTimer = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
   initGauges();
@@ -14,9 +21,61 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupRangeButtons();
   await loadConfig();
   connectSSE();
+  startWatchdog();
 });
 
-// 1. Radial Speedometer Gauges
+// -----------------------------------------------------------------------------
+// Live Connection Watchdog & Status Pill
+// -----------------------------------------------------------------------------
+function setStatusOnline() {
+  const pill = document.getElementById('status-pill');
+  const dot = document.getElementById('status-dot');
+  const text = document.getElementById('connection-status');
+  if (pill && dot && text) {
+    pill.className = 'flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-bold transition-all duration-300';
+    dot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse';
+    text.textContent = 'LIVE 0.5s';
+  }
+}
+
+function setStatusOffline(reason = 'OFFLINE') {
+  const pill = document.getElementById('status-pill');
+  const dot = document.getElementById('status-dot');
+  const text = document.getElementById('connection-status');
+  if (pill && dot && text) {
+    pill.className = 'flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-rose-500/10 border border-rose-500/30 text-rose-400 font-bold transition-all duration-300';
+    dot.className = 'w-2.5 h-2.5 rounded-full bg-rose-500';
+    text.textContent = reason;
+  }
+}
+
+function setStatusConnecting() {
+  const pill = document.getElementById('status-pill');
+  const dot = document.getElementById('status-dot');
+  const text = document.getElementById('connection-status');
+  if (pill && dot && text) {
+    pill.className = 'flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 font-bold transition-all duration-300';
+    dot.className = 'w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse';
+    text.textContent = 'CONNECTING...';
+  }
+}
+
+function startWatchdog() {
+  if (watchdogTimer) clearInterval(watchdogTimer);
+  watchdogTimer = setInterval(() => {
+    const now = Date.now();
+    if (now - lastMessageTimestamp > 1800) {
+      setStatusOffline('OFFLINE');
+      if (!eventSource || eventSource.readyState === EventSource.CLOSED) {
+        connectSSE();
+      }
+    }
+  }, 1000);
+}
+
+// -----------------------------------------------------------------------------
+// 1. Radial Speedometer Gauges (24px Bold High-Contrast Values)
+// -----------------------------------------------------------------------------
 function initGauges() {
   const commonRadialOptions = {
     chart: { type: 'radialBar', height: 180, sparkline: { enabled: true } },
@@ -24,14 +83,14 @@ function initGauges() {
       radialBar: {
         startAngle: -120,
         endAngle: 120,
-        hollow: { size: '68%' },
+        hollow: { size: '65%' },
         track: { background: 'rgba(255, 255, 255, 0.05)', strokeWidth: '100%' },
         dataLabels: {
           name: { show: false },
           value: {
             offsetY: 8,
-            fontSize: '18px',
-            fontWeight: 700,
+            fontSize: '24px',
+            fontWeight: 800,
             fontFamily: 'monospace',
             color: '#f8fafc',
             formatter: (val) => val,
@@ -106,16 +165,18 @@ function initGauges() {
   powerGauge.render();
 }
 
+// -----------------------------------------------------------------------------
 // 2. Dedicated Purpose-Built Time-Series Charts
+// -----------------------------------------------------------------------------
 function initDedicatedCharts() {
   const commonChartConfig = {
     chart: {
       type: 'area',
-      height: 190,
+      height: 200,
       fontFamily: 'inherit',
       background: 'transparent',
       toolbar: { show: false },
-      animations: { enabled: true, easing: 'linear', dynamicAnimation: { speed: 800 } }
+      animations: { enabled: true, easing: 'linear', dynamicAnimation: { speed: 600 } }
     },
     theme: { mode: 'dark' },
     stroke: { curve: 'smooth', width: 2 },
@@ -138,51 +199,35 @@ function initDedicatedCharts() {
     tooltip: { theme: 'dark', x: { format: 'HH:mm:ss' } }
   };
 
-  // Graph 1: CPU Utilisation
+  // Graph 1: CPU Utilisation (%) vs CPU Clock (MHz)
   chartCpu = new ApexCharts(document.querySelector("#chart-cpu"), {
     ...commonChartConfig,
-    colors: ['#6366f1'],
-    yaxis: {
-      title: { text: 'CPU (%)', style: { color: '#818cf8', fontSize: '10px' } },
-      min: 0,
-      max: 100,
-      labels: { style: { colors: '#64748b' }, formatter: (v) => `${Math.round(v)}%` }
-    },
+    colors: ['#6366f1', '#06b6d4'],
+    yaxis: [
+      {
+        seriesName: 'CPU Load (%)',
+        title: { text: 'CPU (%)', style: { color: '#818cf8', fontSize: '10px' } },
+        min: 0,
+        max: 100,
+        labels: { style: { colors: '#64748b' }, formatter: (v) => `${Math.round(v)}%` }
+      },
+      {
+        seriesName: 'Clock Speed (MHz)',
+        opposite: true,
+        title: { text: 'Clock (MHz)', style: { color: '#06b6d4', fontSize: '10px' } },
+        min: 400,
+        max: 3500,
+        labels: { style: { colors: '#64748b' }, formatter: (v) => `${Math.round(v)} MHz` }
+      }
+    ],
     series: [
-      { name: 'CPU Load (%)', data: [] }
+      { name: 'CPU Load (%)', data: [] },
+      { name: 'Clock Speed (MHz)', data: [] }
     ]
   });
   chartCpu.render();
 
-  // Graph 2: Fan Speed (RPM) & CPU Temp (°C)
-  chartFanTemp = new ApexCharts(document.querySelector("#chart-fan-temp"), {
-    ...commonChartConfig,
-    colors: ['#22d3ee', '#10b981'],
-    yaxis: [
-      {
-        seriesName: 'Fan Speed (RPM)',
-        title: { text: 'Fan (RPM)', style: { color: '#22d3ee', fontSize: '10px' } },
-        min: 0,
-        max: 5000,
-        labels: { style: { colors: '#64748b' }, formatter: (v) => `${Math.round(v)}` }
-      },
-      {
-        seriesName: 'CPU Temp (°C)',
-        opposite: true,
-        title: { text: 'Temp (°C)', style: { color: '#10b981', fontSize: '10px' } },
-        min: 20,
-        max: 100,
-        labels: { style: { colors: '#64748b' }, formatter: (v) => `${Math.round(v)}°C` }
-      }
-    ],
-    series: [
-      { name: 'Fan Speed (RPM)', data: [] },
-      { name: 'CPU Temp (°C)', data: [] }
-    ]
-  });
-  chartFanTemp.render();
-
-  // Graph 3: Power Draw (Watts)
+  // Graph 2: Power Draw (Watts)
   chartPower = new ApexCharts(document.querySelector("#chart-power"), {
     ...commonChartConfig,
     colors: ['#f59e0b'],
@@ -197,7 +242,7 @@ function initDedicatedCharts() {
   });
   chartPower.render();
 
-  // Graph 4: Network Throughput (Home LAN vs Tailscale VPN)
+  // Graph 3: Network Throughput (Home LAN vs Tailscale VPN)
   chartNetwork = new ApexCharts(document.querySelector("#chart-network"), {
     ...commonChartConfig,
     height: 200,
@@ -224,19 +269,26 @@ function initDedicatedCharts() {
   chartNetwork.render();
 }
 
+// -----------------------------------------------------------------------------
 // 3. Connect to Server-Sent Events (SSE)
+// -----------------------------------------------------------------------------
 function connectSSE() {
-  const statusElem = document.getElementById('connection-status');
-  const es = new EventSource('/api/stream');
+  if (eventSource) {
+    try { eventSource.close(); } catch(e) {}
+  }
 
-  es.onopen = () => {
-    statusElem.textContent = 'LIVE 0.5s';
-    statusElem.parentElement.classList.remove('bg-rose-500/10', 'border-rose-500/30', 'text-rose-400');
-    statusElem.parentElement.classList.add('bg-emerald-500/10', 'border-emerald-500/30', 'text-emerald-400');
+  setStatusConnecting();
+  eventSource = new EventSource('/api/stream');
+
+  eventSource.onopen = () => {
+    lastMessageTimestamp = Date.now();
+    setStatusOnline();
   };
 
-  es.onmessage = (event) => {
+  eventSource.onmessage = (event) => {
     try {
+      lastMessageTimestamp = Date.now();
+      setStatusOnline();
       const data = JSON.parse(event.data);
       updateDashboard(data);
     } catch (e) {
@@ -244,18 +296,22 @@ function connectSSE() {
     }
   };
 
-  es.onerror = () => {
-    statusElem.textContent = 'RECONNECTING...';
-    statusElem.parentElement.classList.remove('bg-emerald-500/10', 'border-emerald-500/30', 'text-emerald-400');
-    statusElem.parentElement.classList.add('bg-rose-500/10', 'border-rose-500/30', 'text-rose-400');
+  eventSource.onerror = () => {
+    setStatusOffline('OFFLINE');
   };
 }
 
+// -----------------------------------------------------------------------------
 // 4. Update UI with incoming Telemetry
+// -----------------------------------------------------------------------------
 function updateDashboard(data) {
-  // Header
+  // Header & Dynamic Versioned Footer
   document.getElementById('server-host').textContent = `${data.system.hostname} • ${data.system.os_name} ${data.system.os_version}`;
   document.getElementById('uptime-display').textContent = data.system.uptime_human;
+  const footerVer = document.getElementById('footer-version');
+  if (footerVer && data.system.version) {
+    footerVer.innerHTML = `Shao (哨兵) v${data.system.version} • <a href="https://github.com/adieltan/shao" target="_blank" class="text-brand-400 hover:underline">GitHub</a>`;
+  }
 
   // CPU Load & Clock Frequency
   document.getElementById('cpu-percent').textContent = `${data.cpu.total_usage_percent.toFixed(1)}%`;
@@ -306,17 +362,6 @@ function updateDashboard(data) {
 
   const temp = data.thermals.cpu_temp_celsius;
   tempGauge.updateSeries([Math.round(temp)]);
-  const tempStatus = document.getElementById('temp-status');
-  if (temp < 55) {
-    tempStatus.textContent = 'Cool & Optimal';
-    tempStatus.className = 'text-emerald-400 font-semibold';
-  } else if (temp < 75) {
-    tempStatus.textContent = 'Warm';
-    tempStatus.className = 'text-amber-400 font-semibold';
-  } else {
-    tempStatus.textContent = 'High Temp';
-    tempStatus.className = 'text-rose-400 font-semibold';
-  }
 
   const watts = data.power.current_watts;
   powerGauge.updateSeries([Math.round(watts * 10)]);
@@ -326,14 +371,15 @@ function updateDashboard(data) {
   document.getElementById('energy-month').textContent = data.power.energy_month_human;
   document.getElementById('energy-year').textContent = data.power.energy_year_human;
 
-  // Real-Time Streaming Charts
-  if (isLiveStreaming) {
+  // --------------------------------------------------------------------------
+  // Continuous Rolling Stream (Appends till NOW across ALL time windows)
+  // --------------------------------------------------------------------------
+  if (!isFetchingHistory) {
     const timestamp = data.timestamp * 1000;
-    rollingHistory.push({
+    activeDataPoints.push({
       timestamp,
       cpu: data.cpu.total_usage_percent,
-      fan: data.thermals.fan_rpm,
-      temp: data.thermals.cpu_temp_celsius,
+      cpu_freq: data.cpu.avg_frequency_mhz,
       power: data.power.current_watts,
       lan_rx: data.network.lan_rx_speed_bps,
       lan_tx: data.network.lan_tx_speed_bps,
@@ -341,40 +387,45 @@ function updateDashboard(data) {
       vpn_tx: data.network.vpn_tx_speed_bps,
     });
 
-    if (rollingHistory.length > MAX_LIVE_POINTS) {
-      rollingHistory.shift();
+    // Prune points older than active time window
+    const cutoff = timestamp - (activeTimeWindowSeconds * 1000);
+    while (activeDataPoints.length > 0 && activeDataPoints[0].timestamp < cutoff) {
+      activeDataPoints.shift();
     }
 
-    // Graph 1: CPU Utilisation
-    chartCpu.updateSeries([
-      { name: 'CPU Load (%)', data: rollingHistory.map(p => [p.timestamp, p.cpu]) }
-    ]);
-
-    // Graph 2: Fan Speed & CPU Temp
-    chartFanTemp.updateSeries([
-      { name: 'Fan Speed (RPM)', data: rollingHistory.map(p => [p.timestamp, p.fan]) },
-      { name: 'CPU Temp (°C)', data: rollingHistory.map(p => [p.timestamp, p.temp]) }
-    ]);
-
-    // Graph 3: Power Draw
-    chartPower.updateSeries([
-      { name: 'Power Draw (W)', data: rollingHistory.map(p => [p.timestamp, p.power]) }
-    ]);
-
-    // Graph 4: Network
-    chartNetwork.updateSeries([
-      { name: 'LAN Download (B/s)', data: rollingHistory.map(p => [p.timestamp, p.lan_rx]) },
-      { name: 'LAN Upload (B/s)', data: rollingHistory.map(p => [p.timestamp, p.lan_tx]) },
-      { name: 'VPN Download (B/s)', data: rollingHistory.map(p => [p.timestamp, p.vpn_rx]) },
-      { name: 'VPN Upload (B/s)', data: rollingHistory.map(p => [p.timestamp, p.vpn_tx]) }
-    ]);
+    renderAllCharts(activeDataPoints);
   }
 
   // Docker Containers
   updateDockerContainers(data.containers);
 }
 
+function renderAllCharts(points) {
+  if (!points || points.length === 0) return;
+
+  // Graph 1: CPU Utilisation (%) & CPU Clock (MHz)
+  chartCpu.updateSeries([
+    { name: 'CPU Load (%)', data: points.map(p => [p.timestamp, p.cpu]) },
+    { name: 'Clock Speed (MHz)', data: points.map(p => [p.timestamp, p.cpu_freq]) }
+  ]);
+
+  // Graph 2: Power Draw
+  chartPower.updateSeries([
+    { name: 'Power Draw (W)', data: points.map(p => [p.timestamp, p.power]) }
+  ]);
+
+  // Graph 3: Network
+  chartNetwork.updateSeries([
+    { name: 'LAN Download (B/s)', data: points.map(p => [p.timestamp, p.lan_rx]) },
+    { name: 'LAN Upload (B/s)', data: points.map(p => [p.timestamp, p.lan_tx]) },
+    { name: 'VPN Download (B/s)', data: points.map(p => [p.timestamp, p.vpn_rx]) },
+    { name: 'VPN Upload (B/s)', data: points.map(p => [p.timestamp, p.vpn_tx]) }
+  ]);
+}
+
+// -----------------------------------------------------------------------------
 // 5. Render Docker Containers
+// -----------------------------------------------------------------------------
 function updateDockerContainers(containers) {
   document.getElementById('container-count').textContent = containers.length;
   const grid = document.getElementById('docker-container-grid');
@@ -382,7 +433,7 @@ function updateDockerContainers(containers) {
 
   if (containers.length === 0) {
     grid.innerHTML = `
-      <div class="col-span-2 text-center text-xs text-slate-500 py-6">
+      <div class="col-span-2 text-center text-xs text-slate-500 py-6 font-mono">
         No active Docker containers detected on /var/run/docker.sock
       </div>
     `;
@@ -392,7 +443,7 @@ function updateDockerContainers(containers) {
   containers.forEach(c => {
     const isRunning = c.is_running;
     const card = document.createElement('div');
-    card.className = 'p-3 rounded-xl bg-slate-900/60 border border-slate-800 flex items-center justify-between hover:border-slate-700 transition';
+    card.className = 'p-3 rounded-xl bg-slate-900/70 border border-slate-800 flex items-center justify-between hover:border-slate-700 transition';
     card.innerHTML = `
       <div class="flex items-center gap-3 overflow-hidden">
         <span class="w-2.5 h-2.5 rounded-full ${isRunning ? 'bg-emerald-400 shadow-sm shadow-emerald-400/50' : 'bg-rose-500'}"></span>
@@ -401,7 +452,7 @@ function updateDockerContainers(containers) {
           <p class="text-[10px] text-slate-400 truncate font-mono">${c.image}</p>
         </div>
       </div>
-      <span class="text-[10px] px-2 py-0.5 rounded font-mono font-medium ${isRunning ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'}">
+      <span class="text-[10px] px-2 py-0.5 rounded font-mono font-bold ${isRunning ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'}">
         ${c.status}
       </span>
     `;
@@ -409,7 +460,9 @@ function updateDockerContainers(containers) {
   });
 }
 
-// 6. Load Config & Apps
+// -----------------------------------------------------------------------------
+// 6. Load Config & Apps (Icon + Name Only Shortcuts)
+// -----------------------------------------------------------------------------
 async function loadConfig() {
   try {
     const res = await fetch('/api/config');
@@ -433,18 +486,15 @@ async function loadConfig() {
       const tile = document.createElement('a');
       tile.href = targetUrl;
       tile.target = '_blank';
-      tile.className = 'p-3 rounded-xl bg-slate-900/60 border border-slate-800 flex items-center justify-between hover:border-brand-500/50 hover:bg-slate-800/80 transition group';
+      tile.className = 'p-3.5 rounded-xl bg-slate-900/70 border border-slate-800 flex items-center justify-between hover:border-brand-500/50 hover:bg-slate-800/80 transition group';
       tile.innerHTML = `
         <div class="flex items-center gap-3">
           <div class="p-2 rounded-lg bg-brand-500/10 text-brand-400 group-hover:bg-brand-500 group-hover:text-white transition">
             <i data-lucide="${app.icon || 'globe'}" class="w-4 h-4"></i>
           </div>
-          <div>
-            <h4 class="text-xs font-bold text-white group-hover:text-brand-300 transition">${app.name}</h4>
-            <p class="text-[10px] text-slate-400">${app.description}</p>
-          </div>
+          <h4 class="text-sm font-bold text-white group-hover:text-brand-300 transition">${app.name}</h4>
         </div>
-        <i data-lucide="external-link" class="w-3.5 h-3.5 text-slate-500 group-hover:text-brand-400 transition"></i>
+        <i data-lucide="external-link" class="w-4 h-4 text-slate-500 group-hover:text-brand-400 transition"></i>
       `;
       container.appendChild(tile);
     });
@@ -455,55 +505,55 @@ async function loadConfig() {
   }
 }
 
-// 7. Time-Range History Switching
+// -----------------------------------------------------------------------------
+// 7. Continuous Time-Range History Switching
+// -----------------------------------------------------------------------------
 function setupRangeButtons() {
   const buttons = document.querySelectorAll('.range-btn');
   buttons.forEach(btn => {
     btn.addEventListener('click', async () => {
       buttons.forEach(b => {
-        b.classList.remove('bg-brand-500', 'text-white', 'font-semibold', 'shadow');
+        b.classList.remove('bg-brand-500', 'text-white', 'font-extrabold', 'shadow');
         b.classList.add('text-slate-400');
       });
-      btn.classList.add('bg-brand-500', 'text-white', 'font-semibold', 'shadow');
+      btn.classList.add('bg-brand-500', 'text-white', 'font-extrabold', 'shadow');
       btn.classList.remove('text-slate-400');
 
       const seconds = parseInt(btn.dataset.seconds, 10);
+      activeTimeWindowSeconds = seconds;
+
       if (seconds === 60) {
-        isLiveStreaming = true;
+        const cutoff = Date.now() - 60000;
+        activeDataPoints = activeDataPoints.filter(p => p.timestamp >= cutoff);
+        renderAllCharts(activeDataPoints);
       } else {
-        isLiveStreaming = false;
-        await fetchHistoricalData(seconds);
+        await fetchHistoricalWindow(seconds);
       }
     });
   });
 }
 
-async function fetchHistoricalData(seconds) {
+async function fetchHistoricalWindow(seconds) {
+  isFetchingHistory = true;
   try {
     const res = await fetch(`/api/history?seconds=${seconds}`);
     const points = await res.json();
-    if (!points || points.length === 0) return;
-
-    chartCpu.updateSeries([
-      { name: 'CPU Load (%)', data: points.map(p => [p.timestamp * 1000, p.cpu_usage]) }
-    ]);
-
-    chartFanTemp.updateSeries([
-      { name: 'Fan Speed (RPM)', data: points.map(p => [p.timestamp * 1000, p.fan_rpm]) },
-      { name: 'CPU Temp (°C)', data: points.map(p => [p.timestamp * 1000, p.cpu_temp]) }
-    ]);
-
-    chartPower.updateSeries([
-      { name: 'Power Draw (W)', data: points.map(p => [p.timestamp * 1000, p.power_watts]) }
-    ]);
-
-    chartNetwork.updateSeries([
-      { name: 'LAN Download (B/s)', data: points.map(p => [p.timestamp * 1000, p.lan_rx_speed]) },
-      { name: 'LAN Upload (B/s)', data: points.map(p => [p.timestamp * 1000, p.lan_tx_speed]) },
-      { name: 'VPN Download (B/s)', data: points.map(p => [p.timestamp * 1000, p.vpn_rx_speed]) },
-      { name: 'VPN Upload (B/s)', data: points.map(p => [p.timestamp * 1000, p.vpn_tx_speed]) }
-    ]);
+    if (points && points.length > 0) {
+      activeDataPoints = points.map(p => ({
+        timestamp: p.timestamp * 1000,
+        cpu: p.cpu_usage,
+        cpu_freq: p.cpu_freq || 800,
+        power: p.power_watts,
+        lan_rx: p.lan_rx_speed,
+        lan_tx: p.lan_tx_speed,
+        vpn_rx: p.vpn_rx_speed,
+        vpn_tx: p.vpn_tx_speed,
+      }));
+      renderAllCharts(activeDataPoints);
+    }
   } catch (e) {
-    console.error('Failed to fetch history:', e);
+    console.error('Failed to fetch historical window:', e);
+  } finally {
+    isFetchingHistory = false;
   }
 }
