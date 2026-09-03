@@ -5,8 +5,8 @@
 let fanGauge, tempGauge, powerGauge;
 let chartCpu, chartPower, chartNetwork;
 
-// Continuous Rolling Window State (Supports all ranges: Live 60s, 15m, 1h, 6h, 24h, 7d)
-let activeTimeWindowSeconds = 60;
+// Continuous Rolling Window State (Supports all ranges: Live 5m, 15m, 1h, 6h, 24h, 7d)
+let activeTimeWindowSeconds = 300;
 let activeDataPoints = [];
 let isFetchingHistory = false;
 
@@ -621,8 +621,8 @@ function setupRangeButtons() {
       const seconds = parseInt(btn.dataset.seconds, 10);
       activeTimeWindowSeconds = seconds;
 
-      if (seconds === 60) {
-        const cutoff = Date.now() - 60000;
+      if (seconds === 300) {
+        const cutoff = Date.now() - 300000;
         activeDataPoints = activeDataPoints.filter(p => p.timestamp >= cutoff);
         renderAllCharts(activeDataPoints);
       } else {
