@@ -1,6 +1,6 @@
 [package]
 name = "shao"
-version = "0.1.5"
+version = "0.1.6"
 edition = "2021"
 authors = ["Adiel Tan <adieltan@users.noreply.github.com>"]
 description = "Shao (哨兵) - Ultra-lightweight, single-binary Linux server telemetry & monitoring sentinel in Rust"

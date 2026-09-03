@@ -483,13 +483,19 @@ function updateDockerContainers(containers) {
 
   containers.forEach(c => {
     const isRunning = c.is_running;
+    const portBadge = (c.ports && c.ports.length > 0)
+      ? `<span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-bold">:${c.ports.join(', :')}</span>`
+      : '';
     const card = document.createElement('div');
     card.className = 'p-3 rounded-xl bg-slate-900/70 border border-slate-800 flex items-center justify-between hover:border-slate-700 transition';
     card.innerHTML = `
       <div class="flex items-center gap-3 overflow-hidden">
         <span class="w-2.5 h-2.5 rounded-full ${isRunning ? 'bg-emerald-400 shadow-sm shadow-emerald-400/50' : 'bg-rose-500'}"></span>
         <div class="truncate">
-          <h4 class="text-xs font-bold text-slate-200 truncate">${c.name}</h4>
+          <div class="flex items-center gap-1.5 truncate">
+            <h4 class="text-xs font-bold text-slate-200 truncate">${c.name}</h4>
+            ${portBadge}
+          </div>
           <p class="text-[10px] text-slate-400 truncate font-mono">${c.image}</p>
         </div>
       </div>
@@ -547,14 +553,19 @@ async function loadConfig() {
 
     (cfg.apps || []).forEach(app => {
       let targetUrl = app.url;
+      let portBadge = '';
       try {
         const parsed = new URL(app.url, window.location.origin);
+        if (parsed.port) {
+          portBadge = `<span class="text-[10px] font-mono px-2 py-0.5 rounded bg-brand-500/15 text-brand-300 border border-brand-500/30 font-bold">:${parsed.port}</span>`;
+        }
         if (parsed.hostname === '192.168.1.1' || parsed.hostname === '192.168.1.17' || parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1' || parsed.hostname === 'a456u') {
           targetUrl = `${window.location.protocol}//${window.location.hostname}:${parsed.port}${parsed.pathname}${parsed.search}`;
         }
       } catch (err) {
         if (app.url.startsWith(':')) {
           targetUrl = `${window.location.protocol}//${window.location.hostname}${app.url}`;
+          portBadge = `<span class="text-[10px] font-mono px-2 py-0.5 rounded bg-brand-500/15 text-brand-300 border border-brand-500/30 font-bold">${app.url}</span>`;
         }
       }
 
@@ -569,7 +580,13 @@ async function loadConfig() {
           <div class="p-2 rounded-xl bg-slate-800/80 border border-white/5 flex items-center justify-center group-hover:scale-105 transition">
             ${iconHtml}
           </div>
-          <h4 class="text-sm font-bold text-white group-hover:text-brand-300 transition">${app.name}</h4>
+          <div>
+            <div class="flex items-center gap-2">
+              <h4 class="text-sm font-bold text-white group-hover:text-brand-300 transition">${app.name}</h4>
+              ${portBadge}
+            </div>
+            ${app.description ? `<p class="text-[11px] text-slate-400">${app.description}</p>` : ''}
+          </div>
         </div>
         <i data-lucide="external-link" class="w-4 h-4 text-slate-500 group-hover:text-brand-400 transition"></i>
       `;

@@ -33,9 +33,14 @@ The `a456u` home server hosts several core services, integrated with or monitore
    - Web UI on port `5001` (`http://192.168.1.1:5001` or `http://a456u:5001`).
    - Compose stacks reside on the server in `/home/rh/stacks`.
 
-4. **Tailscale & Remote SSH Access:**
+4. **Glacier AI Server & Ollama:**
+   - Standalone Rust receipt parser microservice (`port 8899`) paired with Ollama (`port 11434`, `qwen2.5:1.5b`).
+   - Resides in `/home/rh/stacks/glacier-ai`.
+
+5. **Tailscale & Remote SSH Access:**
    - Remote terminal administration is performed via SSH (`ssh rh@a456u` or through Tailscale IP).
    - Network card in Shao dashboard automatically splits and tracks Local LAN vs. Tailscale VPN throughput.
+   - Full hosting and infrastructure details are documented in [`docs/SERVER_HOSTING.md`](docs/SERVER_HOSTING.md).
 
 ---
 
@@ -50,3 +55,8 @@ The `a456u` home server hosts several core services, integrated with or monitore
 - **Deployment to Remote Linux Server:**
   - Automated via GitHub Actions CI (`.github/workflows/docker.yml`) building multi-stage Alpine images pushed to `ghcr.io/adieltan/shao:latest`.
   - Deployed on `a456u` using Docker Compose (`docker compose up -d`) with mounted `/proc`, `/sys`, `/var/run/docker.sock`, and dbus sockets.
+  - **Automated Remote Deployment on Push:** Whenever server code is edited and pushed to GitHub, SSH into the server and run:
+    ```bash
+    ssh rh@a456u "cd /home/rh/shao && git pull && docker compose up -d --build"
+    ```
+

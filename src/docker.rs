@@ -14,6 +14,20 @@ pub struct DockerContainer {
     pub state: String,
     pub is_running: bool,
     pub created_at: i64,
+    #[serde(default)]
+    pub ports: Vec<u16>,
+}
+
+#[derive(Deserialize)]
+struct RawPort {
+    #[serde(rename = "IP")]
+    _ip: Option<String>,
+    #[serde(rename = "PrivatePort")]
+    private_port: Option<u16>,
+    #[serde(rename = "PublicPort")]
+    public_port: Option<u16>,
+    #[serde(rename = "Type")]
+    _port_type: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -30,6 +44,8 @@ struct RawContainer {
     state: String,
     #[serde(rename = "Created")]
     created: i64,
+    #[serde(rename = "Ports", default)]
+    ports: Vec<RawPort>,
 }
 
 pub struct DockerClient {
@@ -77,6 +93,14 @@ impl DockerClient {
                                         .trim_start_matches('/')
                                         .to_string();
                                     let is_running = c.state.to_lowercase() == "running";
+                                    let mut ports: Vec<u16> = c
+                                        .ports
+                                        .iter()
+                                        .filter_map(|p| p.public_port.or(p.private_port))
+                                        .collect();
+                                    ports.sort_unstable();
+                                    ports.dedup();
+
                                     DockerContainer {
                                         id: c.id[..12.min(c.id.len())].to_string(),
                                         name: clean_name,
@@ -85,6 +109,7 @@ impl DockerClient {
                                         state: c.state,
                                         is_running,
                                         created_at: c.created,
+                                        ports,
                                     }
                                 })
                                 .collect();
