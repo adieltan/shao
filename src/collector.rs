@@ -88,7 +88,29 @@ impl CollectorService {
             let containers = self.docker_client.list_containers().await;
             let dockge = Some(DockgeCollector::collect(&containers));
 
-            let telemetry = self.sensor_mgr.collect_all(power_metrics, containers, cached_immich.clone(), dockge);
+            // Fetch Glacier AI server activity status (fast, non-blocking, 1s timeout)
+            let glacier_status = {
+                let client = reqwest::Client::builder()
+                    .timeout(std::time::Duration::from_secs(1))
+                    .build()
+                    .ok();
+                if let Some(client) = client {
+                    match client.get("http://127.0.0.1:8899/api/status").send().await {
+                        Ok(resp) if resp.status().is_success() => {
+                            if let Ok(json) = resp.json::<serde_json::Value>().await {
+                                json["status"].as_str().unwrap_or("offline").to_string()
+                            } else {
+                                "offline".to_string()
+                            }
+                        }
+                        _ => "offline".to_string(),
+                    }
+                } else {
+                    "offline".to_string()
+                }
+            };
+
+            let telemetry = self.sensor_mgr.collect_all(power_metrics, containers, cached_immich.clone(), dockge, glacier_status);
 
             // 3. Record history point in SQLite
             let point = HistoryPoint {

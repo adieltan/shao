@@ -405,7 +405,7 @@ function updateDashboard(data) {
   }
 
   // Docker Containers
-  updateDockerContainers(data.containers);
+  updateDockerContainers(data.containers, data.glacier_status);
 }
 
 // -----------------------------------------------------------------------------
@@ -467,7 +467,7 @@ function renderAllCharts(points) {
 // -----------------------------------------------------------------------------
 // 5. Render Docker Containers
 // -----------------------------------------------------------------------------
-function updateDockerContainers(containers) {
+function updateDockerContainers(containers, glacierStatus) {
   document.getElementById('container-count').textContent = containers.length;
   const grid = document.getElementById('docker-container-grid');
   grid.innerHTML = '';
@@ -486,15 +486,28 @@ function updateDockerContainers(containers) {
     const portBadge = (c.ports && c.ports.length > 0)
       ? `<span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-bold">:${c.ports.join(', :')}</span>`
       : '';
+
+    // Activity badge for Glacier AI server
+    let activityBadge = '';
+    if (c.name === 'glacier_server' && isRunning && glacierStatus) {
+      const isProcessing = glacierStatus === 'processing';
+      activityBadge = `<span class="text-[10px] px-1.5 py-0.5 rounded font-mono font-bold ${
+        isProcessing
+          ? 'bg-amber-500/15 text-amber-400 border border-amber-500/25 animate-pulse'
+          : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+      }">${isProcessing ? '⚙ processing' : '● idle'}</span>`;
+    }
+
     const card = document.createElement('div');
     card.className = 'p-3 rounded-xl bg-slate-900/70 border border-slate-800 flex items-center justify-between hover:border-slate-700 transition';
     card.innerHTML = `
       <div class="flex items-center gap-3 overflow-hidden">
         <span class="w-2.5 h-2.5 rounded-full ${isRunning ? 'bg-emerald-400 shadow-sm shadow-emerald-400/50' : 'bg-rose-500'}"></span>
         <div class="truncate">
-          <div class="flex items-center gap-1.5 truncate">
+          <div class="flex items-center gap-1.5 flex-wrap">
             <h4 class="text-xs font-bold text-slate-200 truncate">${c.name}</h4>
             ${portBadge}
+            ${activityBadge}
           </div>
           <p class="text-[10px] text-slate-400 truncate font-mono">${c.image}</p>
         </div>

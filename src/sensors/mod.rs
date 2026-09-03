@@ -43,6 +43,8 @@ pub struct FullTelemetry {
     pub containers: Vec<DockerContainer>,
     pub immich: Option<ImmichStats>,
     pub dockge: Option<DockgeStats>,
+    /// Activity status of the Glacier AI server ("idle", "processing", or "offline")
+    pub glacier_status: String,
 }
 
 pub struct SensorManager {
@@ -75,6 +77,7 @@ impl SensorManager {
         containers: Vec<DockerContainer>,
         immich: Option<ImmichStats>,
         dockge: Option<DockgeStats>,
+        glacier_status: String,
     ) -> FullTelemetry {
         let timestamp = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
@@ -114,6 +117,7 @@ impl SensorManager {
             containers,
             immich,
             dockge,
+            glacier_status,
         }
     }
 }
