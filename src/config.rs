@@ -44,6 +44,8 @@ pub struct PowerConfig {
 pub struct NetworkConfig {
     #[serde(default = "default_lan_interfaces")]
     pub lan_interfaces: Vec<String>,
+    #[serde(default = "default_wlan_interfaces")]
+    pub wlan_interfaces: Vec<String>,
     #[serde(default = "default_vpn_interfaces")]
     pub vpn_interfaces: Vec<String>,
 }
@@ -80,7 +82,13 @@ fn default_immich_url() -> String { "http://127.0.0.1:2283".to_string() }
 
 fn default_lan_interfaces() -> Vec<String> {
     vec![
-        "enp2s0".into(), "eth0".into(), "wlp3s0".into(), "wlan0".into(), "en0".into(),
+        "enp2s0".into(), "eth0".into(), "en0".into(),
+    ]
+}
+
+fn default_wlan_interfaces() -> Vec<String> {
+    vec![
+        "wlp3s0".into(), "wlan0".into(), "wl".into(),
     ]
 }
 
@@ -116,6 +124,7 @@ impl Default for NetworkConfig {
     fn default() -> Self {
         Self {
             lan_interfaces: default_lan_interfaces(),
+            wlan_interfaces: default_wlan_interfaces(),
             vpn_interfaces: default_vpn_interfaces(),
         }
     }

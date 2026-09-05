@@ -3,8 +3,8 @@ use crate::db::Database;
 use crate::sensors::FullTelemetry;
 use crate::system::{execute_power_action, PowerAction};
 use axum::{
-    extract::{Query, State},
-    http::{header, HeaderValue, StatusCode, Uri},
+    extract::{ConnectInfo, Query, State},
+    http::{header, HeaderMap, HeaderValue, StatusCode, Uri},
     response::{
         sse::{Event, Sse},
         IntoResponse, Response,
@@ -15,6 +15,7 @@ use axum::{
 use rust_embed::RustEmbed;
 use serde::{Deserialize, Serialize};
 use std::convert::Infallible;
+use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::sync::{broadcast, RwLock};
 use tokio_stream::wrappers::BroadcastStream;
@@ -38,6 +39,20 @@ pub struct HistoryQuery {
     pub seconds: Option<i64>,
 }
 
+#[derive(Deserialize, Default)]
+pub struct PingQuery {
+    pub client_net: Option<String>,
+}
+
+#[derive(Serialize)]
+pub struct PingResponse {
+    pub status: &'static str,
+    pub server_time_ms: u128,
+    pub client_ip: String,
+    pub connection_type: String, // "vpn", "wlan", "lan", "loopback"
+    pub route: String,
+}
+
 #[derive(Serialize)]
 pub struct SystemActionResponse {
     pub success: bool,
@@ -58,14 +73,79 @@ pub fn create_router(state: AppState) -> Router {
         .with_state(state)
 }
 
-async fn ping_handler() -> impl IntoResponse {
+async fn ping_handler(
+    connect_info: Option<ConnectInfo<SocketAddr>>,
+    headers: HeaderMap,
+    Query(query): Query<PingQuery>,
+) -> impl IntoResponse {
+    let now_ms = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis();
+
+    let client_ip = connect_info
+        .map(|c| c.0.ip().to_string())
+        .or_else(|| {
+            headers
+                .get("x-forwarded-for")
+                .and_then(|v| v.to_str().ok())
+                .and_then(|s| s.split(',').next())
+                .map(|s| s.trim().to_string())
+        })
+        .or_else(|| {
+            headers
+                .get("x-real-ip")
+                .and_then(|v| v.to_str().ok())
+                .map(|s| s.trim().to_string())
+        })
+        .unwrap_or_else(|| "127.0.0.1".to_string());
+
+    let host = headers
+        .get("host")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+
+    // Ground-truth detection of connection route
+    let (connection_type, route) = if client_ip == "127.0.0.1"
+        || client_ip == "::1"
+        || host.starts_with("localhost")
+        || host.starts_with("127.0.0.1")
+    {
+        ("loopback", "Localhost Loopback")
+    } else if client_ip.starts_with("100.")
+        || host.contains(".ts.net")
+        || host.starts_with("100.")
+        || client_ip.starts_with("fd7a:115c:")
+    {
+        ("vpn", "Tailscale Mesh VPN (tailscale0)")
+    } else if host.starts_with("192.168.1.17") || query.client_net.as_deref() == Some("wifi") {
+        ("wlan", "Wireless WLAN (wlp3s0)")
+    } else if host.starts_with("192.168.1.1") || query.client_net.as_deref() == Some("ethernet") {
+        ("lan", "Wired LAN (enp2s0)")
+    } else if client_ip.starts_with("192.168.1.17") {
+        ("wlan", "Wireless WLAN (wlp3s0)")
+    } else if client_ip.starts_with("192.168.1.")
+        || client_ip.starts_with("10.")
+        || client_ip.starts_with("172.")
+    {
+        ("lan", "Local Home LAN")
+    } else {
+        ("vpn", "Remote Connection")
+    };
+
     (
         StatusCode::OK,
         [
             (header::CACHE_CONTROL, HeaderValue::from_static("no-store, no-cache, must-revalidate")),
-            (header::CONTENT_TYPE, HeaderValue::from_static("text/plain")),
+            (header::CONTENT_TYPE, HeaderValue::from_static("application/json")),
         ],
-        "pong",
+        Json(PingResponse {
+            status: "ok",
+            server_time_ms: now_ms,
+            client_ip,
+            connection_type: connection_type.to_string(),
+            route: route.to_string(),
+        }),
     )
 }
 

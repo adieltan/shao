@@ -81,18 +81,18 @@ function startWatchdog() {
 // -----------------------------------------------------------------------------
 function initGauges() {
   const commonRadialOptions = {
-    chart: { type: 'radialBar', height: 180, sparkline: { enabled: true } },
+    chart: { type: 'radialBar', height: 140, sparkline: { enabled: true } },
     plotOptions: {
       radialBar: {
         startAngle: -120,
         endAngle: 120,
-        hollow: { size: '65%' },
+        hollow: { size: '60%' },
         track: { background: 'rgba(255, 255, 255, 0.05)', strokeWidth: '100%' },
         dataLabels: {
           name: { show: false },
           value: {
-            offsetY: 8,
-            fontSize: '24px',
+            offsetY: 6,
+            fontSize: '20px',
             fontWeight: 800,
             fontFamily: 'monospace',
             color: '#f8fafc',
@@ -245,11 +245,11 @@ function initDedicatedCharts() {
   });
   chartPower.render();
 
-  // Graph 3: Network Throughput (Home LAN vs Tailscale VPN)
+  // Graph 3: Network Throughput (Home LAN vs Wireless WLAN vs Tailscale VPN)
   chartNetwork = new ApexCharts(document.querySelector("#chart-network"), {
     ...commonChartConfig,
     height: 200,
-    colors: ['#10b981', '#06b6d4', '#f59e0b', '#f43f5e'],
+    colors: ['#10b981', '#06b6d4', '#38bdf8', '#3b82f6', '#f59e0b', '#f43f5e'],
     yaxis: {
       title: { text: 'Throughput', style: { color: '#10b981', fontSize: '10px' } },
       min: 0,
@@ -266,6 +266,8 @@ function initDedicatedCharts() {
     series: [
       { name: 'LAN Download (B/s)', data: [] },
       { name: 'LAN Upload (B/s)', data: [] },
+      { name: 'WLAN Download (B/s)', data: [] },
+      { name: 'WLAN Upload (B/s)', data: [] },
       { name: 'VPN Download (B/s)', data: [] },
       { name: 'VPN Upload (B/s)', data: [] }
     ]
@@ -356,13 +358,28 @@ function updateDashboard(data) {
   }
 
   // Network Cards
-  document.getElementById('lan-rx').textContent = data.network.lan_rx_speed_human;
-  document.getElementById('lan-tx').textContent = data.network.lan_tx_speed_human;
-  document.getElementById('lan-total').textContent = `${data.network.lan_combined_total_human} Total`;
+  if (data.network) {
+    const lanRx = document.getElementById('lan-rx');
+    const lanTx = document.getElementById('lan-tx');
+    const lanTot = document.getElementById('lan-total');
+    if (lanRx) lanRx.textContent = data.network.lan_rx_speed_human || '0 B/s';
+    if (lanTx) lanTx.textContent = data.network.lan_tx_speed_human || '0 B/s';
+    if (lanTot) lanTot.textContent = `${data.network.lan_combined_total_human || '0 B'} Total`;
 
-  document.getElementById('vpn-rx').textContent = data.network.vpn_rx_speed_human;
-  document.getElementById('vpn-tx').textContent = data.network.vpn_tx_speed_human;
-  document.getElementById('vpn-total').textContent = `${data.network.vpn_combined_total_human} Total`;
+    const wlanRx = document.getElementById('wlan-rx');
+    const wlanTx = document.getElementById('wlan-tx');
+    const wlanTot = document.getElementById('wlan-total');
+    if (wlanRx) wlanRx.textContent = data.network.wlan_rx_speed_human || '0 B/s';
+    if (wlanTx) wlanTx.textContent = data.network.wlan_tx_speed_human || '0 B/s';
+    if (wlanTot) wlanTot.textContent = `${data.network.wlan_combined_total_human || '0 B'} Total`;
+
+    const vpnRx = document.getElementById('vpn-rx');
+    const vpnTx = document.getElementById('vpn-tx');
+    const vpnTot = document.getElementById('vpn-total');
+    if (vpnRx) vpnRx.textContent = data.network.vpn_rx_speed_human || '0 B/s';
+    if (vpnTx) vpnTx.textContent = data.network.vpn_tx_speed_human || '0 B/s';
+    if (vpnTot) vpnTot.textContent = `${data.network.vpn_combined_total_human || '0 B'} Total`;
+  }
 
   // Speedometer Gauges
   const fanPct = Math.min((data.thermals.fan_rpm / 5000.0) * 100.0, 100);
@@ -391,6 +408,8 @@ function updateDashboard(data) {
       power: data.power.current_watts,
       lan_rx: data.network.lan_rx_speed_bps,
       lan_tx: data.network.lan_tx_speed_bps,
+      wlan_rx: data.network.wlan_rx_speed_bps || 0,
+      wlan_tx: data.network.wlan_tx_speed_bps || 0,
       vpn_rx: data.network.vpn_rx_speed_bps,
       vpn_tx: data.network.vpn_tx_speed_bps,
     });
@@ -459,6 +478,8 @@ function renderAllCharts(points) {
   chartNetwork.updateSeries([
     { name: 'LAN Download (B/s)', data: buildSeriesWithGaps(points, p => p.lan_rx, expectedIntervalMs) },
     { name: 'LAN Upload (B/s)', data: buildSeriesWithGaps(points, p => p.lan_tx, expectedIntervalMs) },
+    { name: 'WLAN Download (B/s)', data: buildSeriesWithGaps(points, p => p.wlan_rx, expectedIntervalMs) },
+    { name: 'WLAN Upload (B/s)', data: buildSeriesWithGaps(points, p => p.wlan_tx, expectedIntervalMs) },
     { name: 'VPN Download (B/s)', data: buildSeriesWithGaps(points, p => p.vpn_rx, expectedIntervalMs) },
     { name: 'VPN Upload (B/s)', data: buildSeriesWithGaps(points, p => p.vpn_tx, expectedIntervalMs) }
   ]);
@@ -474,7 +495,7 @@ function updateDockerContainers(containers, glacierStatus) {
 
   if (containers.length === 0) {
     grid.innerHTML = `
-      <div class="col-span-2 text-center text-xs text-slate-500 py-6 font-mono">
+      <div class="col-span-full text-center text-xs text-slate-500 py-6 font-mono">
         No active Docker containers detected on /var/run/docker.sock
       </div>
     `;
@@ -658,6 +679,8 @@ async function fetchHistoricalWindow(seconds) {
         power: p.power_watts,
         lan_rx: p.lan_rx_speed,
         lan_tx: p.lan_tx_speed,
+        wlan_rx: p.wlan_rx_speed || 0,
+        wlan_tx: p.wlan_tx_speed || 0,
         vpn_rx: p.vpn_rx_speed,
         vpn_tx: p.vpn_tx_speed,
       }));
@@ -831,14 +854,31 @@ function startClientPingTracker() {
   async function measurePing() {
     const t0 = performance.now();
     try {
-      const res = await fetch('/api/ping', {
+      const clientNet = (navigator.connection && navigator.connection.type) ? navigator.connection.type : '';
+      const pingUrl = `/api/ping?t=${Date.now()}&client_net=${encodeURIComponent(clientNet)}`;
+      const res = await fetch(pingUrl, {
         method: 'GET',
         cache: 'no-store',
         headers: { 'Cache-Control': 'no-cache' }
       });
       if (res.ok) {
-        const rtt = performance.now() - t0;
-        const latency = Math.max(Math.round(rtt * 10) / 10, 0.1);
+        const pingData = await res.json().catch(() => ({}));
+        const t1 = performance.now();
+
+        // High-precision socket timing using Resource Timing API if available
+        let latency = t1 - t0;
+        try {
+          const fullUrl = new URL(pingUrl, window.location.href).href;
+          const entries = performance.getEntriesByName(fullUrl);
+          if (entries && entries.length > 0) {
+            const entry = entries[entries.length - 1];
+            if (entry.duration && entry.duration > 0) {
+              latency = entry.duration;
+            }
+          }
+        } catch (err) {}
+
+        latency = Math.max(Math.round(latency * 10) / 10, 0.1);
 
         pingHistory.push(latency);
         if (pingHistory.length > 30) {
@@ -850,32 +890,46 @@ function startClientPingTracker() {
         const avg = pingHistory.reduce((a, b) => a + b, 0) / pingHistory.length;
         const jitter = Math.abs(latency - avg);
 
-        // Color coding & connection tier categorization
+        // Ground-Truth Connection Status (Decoupled from latency estimates)
+        const host = window.location.hostname;
+        const serverType = pingData.connection_type || '';
+
         let tierText = 'LAN';
-        let colorClass = 'text-emerald-400';
         let badgeClass = 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
         let dotBg = 'bg-emerald-400';
 
-        if (latency < 15) {
-          tierText = 'LAN';
-          colorClass = 'text-emerald-400';
-          badgeClass = 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
-          dotBg = 'bg-emerald-400';
-        } else if (latency < 50) {
-          tierText = 'Wi-Fi / Nearby';
-          colorClass = 'text-cyan-400';
-          badgeClass = 'text-cyan-400 bg-cyan-500/10 border-cyan-500/20';
-          dotBg = 'bg-cyan-400';
-        } else if (latency < 120) {
+        if (serverType === 'vpn' || host.startsWith('100.') || host.includes('.ts.net')) {
           tierText = 'Remote VPN';
-          colorClass = 'text-amber-400';
           badgeClass = 'text-amber-400 bg-amber-500/10 border-amber-500/20';
           dotBg = 'bg-amber-400';
+        } else if (serverType === 'wlan' || host === '192.168.1.17' || clientNet === 'wifi') {
+          tierText = 'WLAN';
+          badgeClass = 'text-cyan-400 bg-cyan-500/10 border-cyan-500/20';
+          dotBg = 'bg-cyan-400';
+        } else if (serverType === 'lan' || host === '192.168.1.1' || clientNet === 'ethernet') {
+          tierText = 'LAN';
+          badgeClass = 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
+          dotBg = 'bg-emerald-400';
+        } else if (serverType === 'loopback' || host === 'localhost' || host === '127.0.0.1') {
+          tierText = 'Localhost';
+          badgeClass = 'text-purple-400 bg-purple-500/10 border-purple-500/20';
+          dotBg = 'bg-purple-400';
         } else {
-          tierText = 'High Latency';
+          tierText = 'LAN';
+          badgeClass = 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
+          dotBg = 'bg-emerald-400';
+        }
+
+        // Latency Metric Performance Color Coding
+        let colorClass = 'text-emerald-400';
+        if (latency > 120) {
           colorClass = 'text-rose-400';
-          badgeClass = 'text-rose-400 bg-rose-500/10 border-rose-500/20';
-          dotBg = 'bg-rose-400';
+        } else if (latency > 60) {
+          colorClass = 'text-amber-400';
+        } else if (latency > 20) {
+          colorClass = 'text-cyan-400';
+        } else {
+          colorClass = 'text-emerald-400';
         }
 
         if (pingDisplay) {
@@ -884,17 +938,17 @@ function startClientPingTracker() {
         }
         if (pingCardVal) {
           pingCardVal.textContent = latency.toFixed(1);
-          pingCardVal.className = `text-2xl font-extrabold font-mono ${colorClass}`;
+          pingCardVal.className = `text-xl xl:text-2xl font-extrabold font-mono ${colorClass}`;
         }
         if (pingCardDot) {
-          pingCardDot.className = `w-2.5 h-2.5 rounded-full ${dotBg} animate-pulse`;
+          pingCardDot.className = `w-2 h-2 rounded-full ${dotBg} animate-pulse`;
         }
         if (pingTierBadge) {
           pingTierBadge.textContent = tierText;
-          pingTierBadge.className = `text-xs font-mono font-semibold px-2 py-0.5 rounded border ${badgeClass}`;
+          pingTierBadge.className = `text-[10px] font-mono font-semibold px-2 py-0.5 rounded border ${badgeClass}`;
         }
         if (pingJitter) {
-          pingJitter.textContent = `±${jitter.toFixed(1)} ms jitter`;
+          pingJitter.textContent = `±${jitter.toFixed(1)} ms`;
         }
         if (pingMin) pingMin.textContent = `${min.toFixed(1)} ms`;
         if (pingAvg) pingAvg.textContent = `${avg.toFixed(1)} ms`;
@@ -914,14 +968,14 @@ function startClientPingTracker() {
     }
     if (pingCardVal) {
       pingCardVal.textContent = '--';
-      pingCardVal.className = 'text-2xl font-extrabold font-mono text-slate-500';
+      pingCardVal.className = 'text-xl xl:text-2xl font-extrabold font-mono text-slate-500';
     }
     if (pingCardDot) {
-      pingCardDot.className = 'w-2.5 h-2.5 rounded-full bg-rose-500';
+      pingCardDot.className = 'w-2 h-2 rounded-full bg-rose-500';
     }
     if (pingTierBadge) {
       pingTierBadge.textContent = 'Offline';
-      pingTierBadge.className = 'text-xs font-mono font-semibold px-2 py-0.5 rounded border text-rose-400 bg-rose-500/10 border-rose-500/20';
+      pingTierBadge.className = 'text-[10px] font-mono font-semibold px-2 py-0.5 rounded border text-rose-400 bg-rose-500/10 border-rose-500/20';
     }
   }
 

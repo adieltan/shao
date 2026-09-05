@@ -14,6 +14,14 @@ pub struct NetworkMetrics {
     pub lan_tx_total_human: String,
     pub lan_combined_total_human: String,
 
+    pub wlan_rx_speed_bps: f64,
+    pub wlan_tx_speed_bps: f64,
+    pub wlan_rx_speed_human: String,
+    pub wlan_tx_speed_human: String,
+    pub wlan_rx_total_human: String,
+    pub wlan_tx_total_human: String,
+    pub wlan_combined_total_human: String,
+
     pub vpn_rx_speed_bps: f64,
     pub vpn_tx_speed_bps: f64,
     pub vpn_rx_speed_human: String,
@@ -39,16 +47,22 @@ pub struct NetworkCollector {
     last_samples: HashMap<String, (u64, u64)>,
     last_time: Instant,
     lan_interfaces: Vec<String>,
+    wlan_interfaces: Vec<String>,
     vpn_interfaces: Vec<String>,
     fallback_networks: Networks,
 }
 
 impl NetworkCollector {
-    pub fn new(lan_interfaces: Vec<String>, vpn_interfaces: Vec<String>) -> Self {
+    pub fn new(
+        lan_interfaces: Vec<String>,
+        wlan_interfaces: Vec<String>,
+        vpn_interfaces: Vec<String>,
+    ) -> Self {
         Self {
             last_samples: HashMap::new(),
             last_time: Instant::now(),
             lan_interfaces,
+            wlan_interfaces,
             vpn_interfaces,
             fallback_networks: Networks::new_with_refreshed_list(),
         }
@@ -66,6 +80,11 @@ impl NetworkCollector {
         let mut lan_rx_tot = 0u64;
         let mut lan_tx_tot = 0u64;
 
+        let mut wlan_rx_spd = 0.0;
+        let mut wlan_tx_spd = 0.0;
+        let mut wlan_rx_tot = 0u64;
+        let mut wlan_tx_tot = 0u64;
+
         let mut vpn_rx_spd = 0.0;
         let mut vpn_tx_spd = 0.0;
         let mut vpn_rx_tot = 0u64;
@@ -74,6 +93,7 @@ impl NetworkCollector {
         let mut interface_details = Vec::new();
 
         for (iface, (rx, tx)) in &current_samples {
+            let is_wlan = self.wlan_interfaces.iter().any(|p| iface.starts_with(p));
             let is_lan = self.lan_interfaces.iter().any(|p| iface.starts_with(p));
             let is_vpn = self.vpn_interfaces.iter().any(|p| iface.starts_with(p));
 
@@ -81,7 +101,13 @@ impl NetworkCollector {
             let rx_spd = (rx.saturating_sub(old_rx) as f64) / dt;
             let tx_spd = (tx.saturating_sub(old_tx) as f64) / dt;
 
-            let category = if is_lan {
+            let category = if is_wlan {
+                wlan_rx_spd += rx_spd;
+                wlan_tx_spd += tx_spd;
+                wlan_rx_tot += rx;
+                wlan_tx_tot += tx;
+                "WLAN".to_string()
+            } else if is_lan {
                 lan_rx_spd += rx_spd;
                 lan_tx_spd += tx_spd;
                 lan_rx_tot += rx;
@@ -117,6 +143,14 @@ impl NetworkCollector {
             lan_rx_total_human: format_bytes(lan_rx_tot),
             lan_tx_total_human: format_bytes(lan_tx_tot),
             lan_combined_total_human: format_bytes(lan_rx_tot + lan_tx_tot),
+
+            wlan_rx_speed_bps: wlan_rx_spd,
+            wlan_tx_speed_bps: wlan_tx_spd,
+            wlan_rx_speed_human: format_speed(wlan_rx_spd),
+            wlan_tx_speed_human: format_speed(wlan_tx_spd),
+            wlan_rx_total_human: format_bytes(wlan_rx_tot),
+            wlan_tx_total_human: format_bytes(wlan_tx_tot),
+            wlan_combined_total_human: format_bytes(wlan_rx_tot + wlan_tx_tot),
 
             vpn_rx_speed_bps: vpn_rx_spd,
             vpn_tx_speed_bps: vpn_tx_spd,

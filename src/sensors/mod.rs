@@ -66,6 +66,7 @@ impl SensorManager {
             power: PowerCollector::new(config.power.kwh_cost, config.power.currency_symbol.clone()),
             network: NetworkCollector::new(
                 config.network.lan_interfaces.clone(),
+                config.network.wlan_interfaces.clone(),
                 config.network.vpn_interfaces.clone(),
             ),
         }

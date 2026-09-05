@@ -122,6 +122,8 @@ impl CollectorService {
                 power_watts: telemetry.power.current_watts,
                 lan_rx_speed: telemetry.network.lan_rx_speed_bps,
                 lan_tx_speed: telemetry.network.lan_tx_speed_bps,
+                wlan_rx_speed: telemetry.network.wlan_rx_speed_bps,
+                wlan_tx_speed: telemetry.network.wlan_tx_speed_bps,
                 vpn_rx_speed: telemetry.network.vpn_rx_speed_bps,
                 vpn_tx_speed: telemetry.network.vpn_tx_speed_bps,
             };
@@ -140,7 +142,7 @@ impl CollectorService {
             let _ = self.tx.send(telemetry);
 
             // 6. Daily history pruning
-            if tick_count % 7200 == 0 {
+            if tick_count.is_multiple_of(7200) {
                 let _ = self.db.prune(self.config.server.history_retention_days);
             }
         }

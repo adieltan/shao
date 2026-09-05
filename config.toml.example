@@ -11,7 +11,8 @@ kwh_cost = 0.15              # Electricity cost per kWh
 currency_symbol = "$"
 
 [network]
-lan_interfaces = ["enp2s0", "eth0", "wlp3s0", "wlan0"]
+lan_interfaces = ["enp2s0", "eth0"]
+wlan_interfaces = ["wlp3s0", "wlan0"]
 vpn_interfaces = ["tailscale0", "wg0"]
 
 [immich]
