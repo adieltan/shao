@@ -77,23 +77,22 @@ function startWatchdog() {
 }
 
 // -----------------------------------------------------------------------------
-// 1. Radial Speedometer Gauges (24px Bold High-Contrast Values)
+// 1. Radial Speedometer Gauges (Bigger Graphs & Increased Fonts)
 // -----------------------------------------------------------------------------
 function initGauges() {
   const commonRadialOptions = {
-    chart: { type: 'radialBar', height: 140, sparkline: { enabled: true } },
+    chart: { type: 'radialBar', sparkline: { enabled: true } },
     plotOptions: {
       radialBar: {
         startAngle: -120,
         endAngle: 120,
-        hollow: { size: '60%' },
         track: { background: 'rgba(255, 255, 255, 0.05)', strokeWidth: '100%' },
         dataLabels: {
           name: { show: false },
           value: {
-            offsetY: 6,
-            fontSize: '20px',
-            fontWeight: 800,
+            offsetY: 8,
+            fontSize: '26px',
+            fontWeight: 900,
             fontFamily: 'monospace',
             color: '#f8fafc',
             formatter: (val) => val,
@@ -104,19 +103,22 @@ function initGauges() {
     stroke: { lineCap: 'round' }
   };
 
-  // Fan Gauge
+  // Fan Gauge (Bigger graph, fills up card space)
   fanGauge = new ApexCharts(document.querySelector("#gauge-fan"), {
     ...commonRadialOptions,
+    chart: { ...commonRadialOptions.chart, height: 185 },
     series: [46],
     colors: ['#22d3ee'],
     plotOptions: {
       ...commonRadialOptions.plotOptions,
       radialBar: {
         ...commonRadialOptions.plotOptions.radialBar,
+        hollow: { size: '60%' },
         dataLabels: {
           ...commonRadialOptions.plotOptions.radialBar.dataLabels,
           value: {
             ...commonRadialOptions.plotOptions.radialBar.dataLabels.value,
+            fontSize: '28px',
             formatter: (val) => `${Math.round(val * 50)} RPM`
           }
         }
@@ -125,19 +127,22 @@ function initGauges() {
   });
   fanGauge.render();
 
-  // Temp Gauge
+  // Temp Gauge (Bigger graph, fills up card space)
   tempGauge = new ApexCharts(document.querySelector("#gauge-temp"), {
     ...commonRadialOptions,
+    chart: { ...commonRadialOptions.chart, height: 185 },
     series: [41],
     colors: ['#10b981'],
     plotOptions: {
       ...commonRadialOptions.plotOptions,
       radialBar: {
         ...commonRadialOptions.plotOptions.radialBar,
+        hollow: { size: '60%' },
         dataLabels: {
           ...commonRadialOptions.plotOptions.radialBar.dataLabels,
           value: {
             ...commonRadialOptions.plotOptions.radialBar.dataLabels.value,
+            fontSize: '28px',
             formatter: (val) => `${Math.round(val)}°C`
           }
         }
@@ -146,19 +151,23 @@ function initGauges() {
   });
   tempGauge.render();
 
-  // Power Gauge
+  // Power Gauge (Balanced height matching Fan/Temp card footprint)
   powerGauge = new ApexCharts(document.querySelector("#gauge-power"), {
     ...commonRadialOptions,
+    chart: { ...commonRadialOptions.chart, height: 145 },
     series: [13],
     colors: ['#f59e0b'],
     plotOptions: {
       ...commonRadialOptions.plotOptions,
       radialBar: {
         ...commonRadialOptions.plotOptions.radialBar,
+        hollow: { size: '58%' },
         dataLabels: {
           ...commonRadialOptions.plotOptions.radialBar.dataLabels,
           value: {
             ...commonRadialOptions.plotOptions.radialBar.dataLabels.value,
+            fontSize: '24px',
+            offsetY: 6,
             formatter: (val) => `${(val / 10.0).toFixed(2)} W`
           }
         }
@@ -345,7 +354,7 @@ function updateDashboard(data) {
 
   // Immich Stats
   if (data.immich) {
-    document.getElementById('immich-photos').textContent = `${data.immich.photos.toLocaleString()} photos`;
+    document.getElementById('immich-photos').textContent = data.immich.photos.toLocaleString();
     document.getElementById('immich-videos').textContent = `${data.immich.videos.toLocaleString()} vids`;
     document.getElementById('immich-storage').textContent = `${data.immich.usage_human}`;
     document.getElementById('immich-user').textContent = data.immich.user_name;
@@ -353,7 +362,7 @@ function updateDashboard(data) {
 
   // Dockge Stats
   if (data.dockge) {
-    document.getElementById('dockge-stacks').textContent = `${data.dockge.active_stacks} Stacks`;
+    document.getElementById('dockge-stacks').textContent = `${data.dockge.active_stacks}`;
     document.getElementById('dockge-containers').textContent = `${data.dockge.running_containers} Run`;
   }
 
