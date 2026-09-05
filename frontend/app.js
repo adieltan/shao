@@ -103,7 +103,7 @@ function initGauges() {
     stroke: { lineCap: 'round' }
   };
 
-  // Fan Gauge (Bigger graph, fills up card space)
+  // Fan Gauge (Bigger graph, hollow expanded to prevent RPM overlap)
   fanGauge = new ApexCharts(document.querySelector("#gauge-fan"), {
     ...commonRadialOptions,
     chart: { ...commonRadialOptions.chart, height: 185 },
@@ -113,12 +113,13 @@ function initGauges() {
       ...commonRadialOptions.plotOptions,
       radialBar: {
         ...commonRadialOptions.plotOptions.radialBar,
-        hollow: { size: '60%' },
+        hollow: { size: '68%' },
         dataLabels: {
           ...commonRadialOptions.plotOptions.radialBar.dataLabels,
           value: {
             ...commonRadialOptions.plotOptions.radialBar.dataLabels.value,
-            fontSize: '28px',
+            fontSize: '22px',
+            offsetY: 6,
             formatter: (val) => `${Math.round(val * 50)} RPM`
           }
         }
@@ -127,7 +128,7 @@ function initGauges() {
   });
   fanGauge.render();
 
-  // Temp Gauge (Bigger graph, fills up card space)
+  // Temp Gauge (Bigger graph, spacious hollow)
   tempGauge = new ApexCharts(document.querySelector("#gauge-temp"), {
     ...commonRadialOptions,
     chart: { ...commonRadialOptions.chart, height: 185 },
@@ -137,12 +138,13 @@ function initGauges() {
       ...commonRadialOptions.plotOptions,
       radialBar: {
         ...commonRadialOptions.plotOptions.radialBar,
-        hollow: { size: '60%' },
+        hollow: { size: '68%' },
         dataLabels: {
           ...commonRadialOptions.plotOptions.radialBar.dataLabels,
           value: {
             ...commonRadialOptions.plotOptions.radialBar.dataLabels.value,
-            fontSize: '28px',
+            fontSize: '24px',
+            offsetY: 6,
             formatter: (val) => `${Math.round(val)}°C`
           }
         }
@@ -161,12 +163,12 @@ function initGauges() {
       ...commonRadialOptions.plotOptions,
       radialBar: {
         ...commonRadialOptions.plotOptions.radialBar,
-        hollow: { size: '58%' },
+        hollow: { size: '65%' },
         dataLabels: {
           ...commonRadialOptions.plotOptions.radialBar.dataLabels,
           value: {
             ...commonRadialOptions.plotOptions.radialBar.dataLabels.value,
-            fontSize: '24px',
+            fontSize: '22px',
             offsetY: 6,
             formatter: (val) => `${(val / 10.0).toFixed(2)} W`
           }

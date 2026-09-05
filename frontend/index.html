@@ -128,11 +128,11 @@
           <!-- Fan Speed Dial (Bigger Graph) -->
           <div class="p-5 rounded-2xl bg-surface-card border border-surface-border backdrop-blur-xl shadow-xl flex flex-col justify-between">
             <div class="flex items-center justify-between mb-1">
-              <div class="flex items-center gap-2.5 text-slate-100 font-extrabold text-base">
+              <div class="flex items-center gap-2 text-slate-100 font-extrabold text-sm sm:text-base whitespace-nowrap">
                 <i data-lucide="fan" class="w-5 h-5 text-cyan-400 animate-spin-slow"></i>
                 <span>Motherboard Fan</span>
               </div>
-              <span class="text-xs font-mono text-cyan-400 font-bold px-2.5 py-0.5 rounded-md bg-cyan-500/10 border border-cyan-500/20">hwmon</span>
+              <span class="text-[11px] font-mono text-cyan-400 font-bold px-2 py-0.5 rounded-md bg-cyan-500/10 border border-cyan-500/20">hwmon</span>
             </div>
             <div id="gauge-fan" class="flex justify-center my-auto py-1"></div>
           </div>
@@ -140,11 +140,11 @@
           <!-- CPU Thermal Dial (Bigger Graph) -->
           <div class="p-5 rounded-2xl bg-surface-card border border-surface-border backdrop-blur-xl shadow-xl flex flex-col justify-between">
             <div class="flex items-center justify-between mb-1">
-              <div class="flex items-center gap-2.5 text-slate-100 font-extrabold text-base">
+              <div class="flex items-center gap-2 text-slate-100 font-extrabold text-sm sm:text-base whitespace-nowrap">
                 <i data-lucide="thermometer" class="w-5 h-5 text-emerald-400"></i>
                 <span>CPU Temperature</span>
               </div>
-              <span class="text-xs font-mono text-emerald-400 font-bold px-2.5 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20">thermal_zone</span>
+              <span class="text-[11px] font-mono text-emerald-400 font-bold px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20">thermal_zone</span>
             </div>
             <div id="gauge-temp" class="flex justify-center my-auto py-1"></div>
           </div>
@@ -152,11 +152,11 @@
           <!-- Real-Time RAPL Power & Cumulative Energy Dial -->
           <div class="p-5 rounded-2xl bg-surface-card border border-surface-border backdrop-blur-xl shadow-xl flex flex-col justify-between">
             <div class="flex items-center justify-between mb-1">
-              <div class="flex items-center gap-2.5 text-slate-100 font-extrabold text-base">
+              <div class="flex items-center gap-2 text-slate-100 font-extrabold text-sm sm:text-base whitespace-nowrap">
                 <i data-lucide="zap" class="w-5 h-5 text-amber-400"></i>
                 <span>Power & Energy</span>
               </div>
-              <span class="text-xs font-mono text-amber-400 font-bold px-2.5 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/20">powercap</span>
+              <span class="text-[11px] font-mono text-amber-400 font-bold px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/20">powercap</span>
             </div>
             
             <div id="gauge-power" class="flex justify-center -my-2"></div>
@@ -186,19 +186,20 @@
 
         </div>
 
-        <!-- ROW 2: Other System Stats Cards Grid (One Row: Balanced Proportions) -->
+        <!-- ROW 2: Other System Stats Cards Grid (One Row: Info Below Main Metrics) -->
         <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3">
           
           <!-- CPU Load & Clock Card -->
           <div class="p-4 rounded-2xl bg-surface-card border border-surface-border backdrop-blur-xl hover:border-brand-500/40 transition flex flex-col justify-between">
             <div>
-              <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center justify-between mb-1.5">
                 <span class="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-slate-300">Processor</span>
                 <i data-lucide="cpu" class="w-4 h-4 text-brand-400"></i>
               </div>
-              <div class="flex items-baseline justify-between mt-1 gap-1">
-                <span id="cpu-percent" class="text-2xl font-black font-mono text-white tracking-tight">0.0%</span>
-                <span id="cpu-mhz-badge" class="px-2 py-0.5 text-xs sm:text-sm font-mono font-extrabold rounded-md bg-brand-500/20 text-brand-300 border border-brand-500/40">800 MHz</span>
+              <div id="cpu-percent" class="text-2xl sm:text-3xl font-black font-mono text-white tracking-tight">0.0%</div>
+              <div class="flex items-center justify-between text-xs sm:text-sm font-mono mt-1">
+                <span class="text-slate-400 font-medium">Clock Speed</span>
+                <span id="cpu-mhz-badge" class="font-extrabold text-brand-300">800 MHz</span>
               </div>
             </div>
             <div class="w-full bg-slate-800/90 rounded-full h-1.5 mt-3 overflow-hidden">
@@ -209,13 +210,14 @@
           <!-- RAM Memory Card -->
           <div class="p-4 rounded-2xl bg-surface-card border border-surface-border backdrop-blur-xl hover:border-brand-500/40 transition flex flex-col justify-between">
             <div>
-              <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center justify-between mb-1.5">
                 <span class="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-slate-300">RAM Memory</span>
                 <i data-lucide="hard-drive" class="w-4 h-4 text-purple-400"></i>
               </div>
-              <div class="flex items-baseline justify-between mt-1 gap-1">
-                <span id="mem-percent" class="text-2xl font-black font-mono text-white tracking-tight">0.0%</span>
-                <span id="mem-human" class="text-xs sm:text-sm text-slate-200 font-mono font-extrabold">0.0 / 0 GB</span>
+              <div id="mem-percent" class="text-2xl sm:text-3xl font-black font-mono text-white tracking-tight">0.0%</div>
+              <div class="flex items-center justify-between text-xs sm:text-sm font-mono mt-1">
+                <span class="text-slate-400 font-medium">Used / Total</span>
+                <span id="mem-human" class="font-bold text-slate-200">0.0 / 0 GB</span>
               </div>
             </div>
             <div class="w-full bg-slate-800/90 rounded-full h-1.5 mt-3 overflow-hidden">
@@ -226,39 +228,44 @@
           <!-- Disk Storage Card -->
           <div class="p-4 rounded-2xl bg-surface-card border border-surface-border backdrop-blur-xl hover:border-brand-500/40 transition flex flex-col justify-between">
             <div>
-              <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center justify-between mb-1.5">
                 <span class="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-slate-300">Disk Storage</span>
                 <i data-lucide="disc" class="w-4 h-4 text-rose-400"></i>
               </div>
-              <div class="flex items-baseline justify-between mt-1 gap-1">
-                <span id="disk-percent" class="text-2xl font-black font-mono text-white tracking-tight">0.0%</span>
-                <span id="disk-human" class="text-xs sm:text-sm text-slate-200 font-mono font-extrabold">0 / 0 GB</span>
+              <div id="disk-percent" class="text-2xl sm:text-3xl font-black font-mono text-white tracking-tight">0.0%</div>
+              <div class="flex items-center justify-between text-xs sm:text-sm font-mono mt-1">
+                <span class="text-slate-400 font-medium">Used / Total</span>
+                <span id="disk-human" class="font-bold text-slate-200">0 / 0 GB</span>
               </div>
             </div>
             <div class="mt-2.5">
               <div class="w-full bg-slate-800/90 rounded-full h-1.5 overflow-hidden">
                 <div id="disk-bar" class="bg-gradient-to-r from-amber-500 to-rose-500 h-1.5 rounded-full transition-all duration-300" style="width: 0%"></div>
               </div>
-              <span id="disk-free" class="text-xs text-slate-300 font-mono font-bold block mt-1.5">Free: -- GB</span>
+              <div class="flex justify-between text-xs font-mono text-slate-400 mt-1">
+                <span>Free</span>
+                <span id="disk-free" class="font-bold text-slate-300">-- GB</span>
+              </div>
             </div>
           </div>
 
           <!-- Immich Live Stats Card -->
           <div class="p-4 rounded-2xl bg-surface-card border border-surface-border backdrop-blur-xl hover:border-brand-500/40 transition flex flex-col justify-between">
             <div>
-              <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center justify-between mb-1.5">
                 <span class="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-slate-300">Immich</span>
                 <i data-lucide="image" class="w-4 h-4 text-cyan-400"></i>
               </div>
-              <div class="flex items-baseline justify-between mt-1 gap-1">
-                <div class="flex items-baseline gap-1">
-                  <span id="immich-photos" class="text-2xl font-black font-mono text-white tracking-tight">--</span>
-                  <span class="text-xs text-slate-400 font-bold uppercase">photos</span>
-                </div>
-                <span id="immich-videos" class="text-xs sm:text-sm text-slate-200 font-mono font-extrabold">-- vids</span>
+              <div class="flex items-baseline gap-1.5">
+                <span id="immich-photos" class="text-2xl sm:text-3xl font-black font-mono text-white tracking-tight">--</span>
+                <span class="text-xs sm:text-sm font-bold text-slate-400 font-mono">photos</span>
+              </div>
+              <div class="flex items-center justify-between text-xs sm:text-sm font-mono mt-1">
+                <span class="text-slate-400 font-medium">Videos</span>
+                <span id="immich-videos" class="font-bold text-slate-200">-- vids</span>
               </div>
             </div>
-            <div class="flex items-center justify-between text-xs sm:text-sm text-cyan-300 font-mono mt-2.5">
+            <div class="flex items-center justify-between text-xs sm:text-sm text-cyan-300 font-mono mt-2.5 pt-2 border-t border-white/5">
               <span id="immich-storage" class="font-extrabold text-xs sm:text-sm">-- GB</span>
               <span id="immich-user" class="text-xs px-2 py-0.5 rounded-md bg-cyan-500/10 text-cyan-400 font-extrabold border border-cyan-500/20">User</span>
             </div>
@@ -267,19 +274,20 @@
           <!-- Dockge & Stacks Stats Card -->
           <div class="p-4 rounded-2xl bg-surface-card border border-surface-border backdrop-blur-xl hover:border-brand-500/40 transition flex flex-col justify-between">
             <div>
-              <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center justify-between mb-1.5">
                 <span class="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-slate-300">Dockge</span>
                 <i data-lucide="layers" class="w-4 h-4 text-emerald-400"></i>
               </div>
-              <div class="flex items-baseline justify-between mt-1 gap-1">
-                <div class="flex items-baseline gap-1">
-                  <span id="dockge-stacks" class="text-2xl font-black font-mono text-white tracking-tight">--</span>
-                  <span class="text-xs text-slate-400 font-bold uppercase">Stacks</span>
-                </div>
-                <span id="dockge-containers" class="text-xs sm:text-sm text-emerald-400 font-mono font-black">-- Run</span>
+              <div class="flex items-baseline gap-1.5">
+                <span id="dockge-stacks" class="text-2xl sm:text-3xl font-black font-mono text-white tracking-tight">--</span>
+                <span class="text-xs sm:text-sm font-bold text-slate-400 font-mono">stacks</span>
+              </div>
+              <div class="flex items-center justify-between text-xs sm:text-sm font-mono mt-1">
+                <span class="text-slate-400 font-medium">Containers</span>
+                <span id="dockge-containers" class="font-extrabold text-emerald-400">-- Run</span>
               </div>
             </div>
-            <div class="text-xs sm:text-sm text-slate-200 font-mono font-bold mt-2.5 flex items-center gap-2">
+            <div class="text-xs sm:text-sm text-slate-200 font-mono font-bold mt-2.5 pt-2 border-t border-white/5 flex items-center gap-2">
               <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
               <span>Compose Active</span>
             </div>
@@ -328,16 +336,16 @@
           </div>
         </div>
 
-        <!-- ROW 4: Network Metrics (One Row: Vertically Stacked Speeds & Matching Typography) -->
+        <!-- ROW 4: Network Metrics (LAN, WLAN, VPN, Ping) -->
         <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
           
-          <!-- Wired LAN Card -->
+          <!-- LAN Card -->
           <div class="p-4 sm:p-5 rounded-2xl bg-surface-card border border-surface-border backdrop-blur-xl hover:border-emerald-500/40 transition flex flex-col justify-between">
             <div>
               <div class="flex items-center justify-between mb-3">
-                <span class="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-slate-200 flex items-center gap-2">
+                <span class="text-sm sm:text-base font-extrabold uppercase tracking-wider text-slate-200 flex items-center gap-2">
                   <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
-                  Wired LAN
+                  LAN
                 </span>
                 <span class="text-xs font-mono text-emerald-400 font-bold px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">enp2s0</span>
               </div>
@@ -362,13 +370,13 @@
             </div>
           </div>
 
-          <!-- Wireless WLAN Card -->
+          <!-- WLAN Card -->
           <div class="p-4 sm:p-5 rounded-2xl bg-surface-card border border-surface-border backdrop-blur-xl hover:border-cyan-500/40 transition flex flex-col justify-between">
             <div>
               <div class="flex items-center justify-between mb-3">
-                <span class="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-slate-200 flex items-center gap-2">
+                <span class="text-sm sm:text-base font-extrabold uppercase tracking-wider text-slate-200 flex items-center gap-2">
                   <span class="w-2.5 h-2.5 rounded-full bg-cyan-400"></span>
-                  Wireless WLAN
+                  WLAN
                 </span>
                 <span class="text-xs font-mono text-cyan-400 font-bold px-2 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/20">wlp3s0</span>
               </div>
@@ -393,13 +401,13 @@
             </div>
           </div>
 
-          <!-- Tailscale Remote VPN Card -->
+          <!-- VPN Card -->
           <div class="p-4 sm:p-5 rounded-2xl bg-surface-card border border-surface-border backdrop-blur-xl hover:border-amber-500/40 transition flex flex-col justify-between">
             <div>
               <div class="flex items-center justify-between mb-3">
-                <span class="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-slate-200 flex items-center gap-2">
+                <span class="text-sm sm:text-base font-extrabold uppercase tracking-wider text-slate-200 flex items-center gap-2">
                   <span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
-                  Tailscale VPN
+                  VPN
                 </span>
                 <span class="text-xs font-mono text-amber-400 font-bold px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20">tailscale0</span>
               </div>
@@ -424,13 +432,13 @@
             </div>
           </div>
 
-          <!-- Client Device ↔ Shao Server Latency Card -->
+          <!-- Ping Card -->
           <div class="p-4 sm:p-5 rounded-2xl bg-surface-card border border-surface-border backdrop-blur-xl hover:border-brand-500/40 transition flex flex-col justify-between">
             <div>
               <div class="flex items-center justify-between mb-3">
-                <span class="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-slate-200 flex items-center gap-2">
+                <span class="text-sm sm:text-base font-extrabold uppercase tracking-wider text-slate-200 flex items-center gap-2">
                   <span id="ping-card-dot" class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                  Device Ping
+                  Ping
                 </span>
                 <span id="ping-tier-badge" class="text-xs font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">LAN</span>
               </div>
